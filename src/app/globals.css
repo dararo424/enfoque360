@@ -8,15 +8,16 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Brand colors Enfoque 360 / Tecnoquímicas */
+  --color-teal: #0CA5A0;
+  --color-teal-dark: #098a86;
+  --color-teal-light: #e6f7f7;
+  --color-navy: #0F2D52;
+  --color-navy-light: #1a4a7a;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

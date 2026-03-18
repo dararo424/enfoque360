@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /e/Proyectos/enfoque360/node_modules/next/dist/docs -type f -name *.md -o -name *.txt)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
