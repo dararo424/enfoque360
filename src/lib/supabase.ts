@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
 
 // ---- Tipos de dominio ----
-export type Rol = 'paciente' | 'enfermera' | 'medico' | 'admin'
+export type Rol = 'paciente' | 'enfermera' | 'medico' | 'admin' | 'usuario_centro'
 
 export interface Centro {
   id: string

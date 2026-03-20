@@ -8,6 +8,7 @@ const ROL_RUTAS: Record<Rol, string> = {
   enfermera: '/enfermeria',
   medico: '/medico',
   admin: '/tq',
+  usuario_centro: '/centro',
 }
 
 // Rutas que no requieren autenticación
