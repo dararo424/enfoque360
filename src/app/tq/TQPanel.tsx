@@ -33,7 +33,12 @@ const TABS = [
   { id: 'capacitaciones',  label: 'Capacitaciones', icon: <GraduationCap className="w-4 h-4" /> },
 ]
 
-export function TQPanel() {
+interface Novedad {
+  id: string; tipo: string; nivel: string; titulo: string; descripcion: string
+  centro: string; responsable: string; sla_dias: number; estado: string; created_at: string
+}
+
+export function TQPanel({ novedadesIniciales = [] }: { novedadesIniciales?: Novedad[] }) {
   const [tab, setTab] = useState('inicio')
 
   return (
@@ -54,17 +59,17 @@ export function TQPanel() {
       </div>
 
       {/* Tab content */}
-      {tab === 'inicio' && <TQInicio />}
+      {tab === 'inicio' && <TQInicio novedadesAbiertas={novedadesIniciales.filter((n) => n.estado === 'abierta').length} />}
       {tab === 'performance'    && <TQPerformance />}
       {tab === 'analisis'       && <TQAnalisis />}
-      {tab === 'novedades'      && <TQNovedades />}
+      {tab === 'novedades'      && <TQNovedades novedadesIniciales={novedadesIniciales} />}
       {tab === 'inversion'      && <TQInversion />}
       {tab === 'capacitaciones' && <TQCapacitaciones />}
     </div>
   )
 }
 
-function TQInicio() {
+function TQInicio({ novedadesAbiertas }: { novedadesAbiertas: number }) {
   const mesActual = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
   return (
     <div className="space-y-6">
@@ -102,7 +107,7 @@ function TQInicio() {
       {/* Accesos rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: '5 alertas abiertas',   sub: 'Ver Novedades →', color: 'border-red-200 bg-red-50/40',    text: 'text-red-700'    },
+          { label: `${novedadesAbiertas || 0} alertas abiertas`,   sub: 'Ver Novedades →', color: 'border-red-200 bg-red-50/40',    text: 'text-red-700'    },
           { label: '87% prep. adecuada',   sub: 'Ver Performance →', color: 'border-teal/20 bg-teal-light',  text: 'text-teal'       },
           { label: '23 médicos EMC',        sub: 'Ver Inversión →',  color: 'border-purple-200 bg-purple-50', text: 'text-purple-700' },
           { label: '76% enfermeras cert.', sub: 'Ver Capacitaciones →', color: 'border-blue-200 bg-blue-50', text: 'text-blue-700'   },

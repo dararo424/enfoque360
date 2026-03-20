@@ -135,6 +135,14 @@ export async function finalizarProcedimiento(procedimientoId: string): Promise<v
   if (!esUUID(procedimientoId)) return
 
   const supabase = await createServerSupabaseClient()
+
+  // Obtener centro_id antes de finalizar para verificar novedades
+  const { data: proc } = await supabase
+    .from('procedimientos')
+    .select('centro_id')
+    .eq('id', procedimientoId)
+    .single()
+
   const { error } = await supabase
     .from('procedimientos')
     .update({
@@ -144,7 +152,212 @@ export async function finalizarProcedimiento(procedimientoId: string): Promise<v
     .eq('id', procedimientoId)
 
   if (error) throw new Error(error.message)
+
+  // Verificar si se deben generar novedades automáticas para el centro
+  if (proc?.centro_id) {
+    await verificarYGenerarNovedades(proc.centro_id).catch(() => {/* no bloquear si falla */})
+  }
+
   revalidatePath('/enfermeria')
+}
+
+// ================================================================
+// MÓDULO CAPACITACIÓN
+// ================================================================
+
+export interface ModuloConProgreso {
+  id: string
+  titulo: string
+  descripcion: string
+  duracion_min: number
+  tipo: 'video' | 'lectura' | 'evaluacion'
+  orden: number
+  completado: boolean
+  puntaje: number | null
+  bloqueado: boolean
+}
+
+export async function cargarModulosCapacitacion(): Promise<ModuloConProgreso[]> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const [{ data: modulos }, { data: progreso }] = await Promise.all([
+    supabase.from('modulos_capacitacion').select('*').order('orden'),
+    supabase.from('progreso_capacitacion').select('*').eq('usuario_id', user.id),
+  ])
+
+  if (!modulos) return []
+
+  const progresoMap: Record<string, { completado: boolean; puntaje: number | null }> = {}
+  for (const p of progreso ?? []) {
+    progresoMap[p.modulo_id] = { completado: p.completado, puntaje: p.puntaje }
+  }
+
+  return modulos.map((m, i) => {
+    const prog = progresoMap[m.id]
+    const completado = prog?.completado ?? false
+    // Un módulo está bloqueado si el anterior no está completado
+    const anterior = i > 0 ? modulos[i - 1] : null
+    const bloqueado = anterior ? !(progresoMap[anterior.id]?.completado ?? false) : false
+    return {
+      id:          m.id,
+      titulo:      m.titulo,
+      descripcion: m.descripcion ?? '',
+      duracion_min: m.duracion_min ?? 30,
+      tipo:        m.tipo as ModuloConProgreso['tipo'],
+      orden:       m.orden,
+      completado,
+      puntaje:     prog?.puntaje ?? null,
+      bloqueado,
+    }
+  })
+}
+
+export async function marcarModuloCompletado(
+  moduloId: string,
+  puntaje?: number
+): Promise<void> {
+  if (!esUUID(moduloId)) return
+
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase
+    .from('progreso_capacitacion')
+    .upsert(
+      {
+        usuario_id:       user.id,
+        modulo_id:        moduloId,
+        completado:       true,
+        puntaje:          puntaje ?? null,
+        fecha_completado: new Date().toISOString(),
+      },
+      { onConflict: 'usuario_id,modulo_id' }
+    )
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/enfermeria/capacitacion')
+}
+
+// ================================================================
+// MÓDULO NOVEDADES — GENERACIÓN AUTOMÁTICA
+// ================================================================
+
+const UMBRAL_REPROCESO_ALTO  = 20 // %
+const UMBRAL_REPROCESO_MEDIO = 15 // %
+const DIAS_ANALISIS          = 30
+
+export async function verificarYGenerarNovedades(centroId: string): Promise<void> {
+  if (!esUUID(centroId)) return
+
+  const supabase = await createServerSupabaseClient()
+
+  const desde = new Date()
+  desde.setDate(desde.getDate() - DIAS_ANALISIS)
+
+  // Obtener procedimientos completados del centro en los últimos N días
+  const { data: procs } = await supabase
+    .from('procedimientos')
+    .select('id, indicadores')
+    .eq('centro_id', centroId)
+    .eq('estado', 'completado')
+    .gte('fecha', desde.toISOString())
+
+  if (!procs || procs.length < 5) return // muy pocos datos, no generar alerta
+
+  const total = procs.length
+  const inadecuados = procs.filter((p) => {
+    const ind = (p.indicadores ?? {}) as Record<string, string>
+    return ind.preparacion === 'inadecuada'
+  }).length
+
+  const pctReprocesos = Math.round((inadecuados / total) * 100)
+
+  if (pctReprocesos < UMBRAL_REPROCESO_MEDIO) return
+
+  const nivel = pctReprocesos >= UMBRAL_REPROCESO_ALTO ? 'alto' : 'medio'
+
+  // Verificar si ya hay una novedad abierta de tipo reproceso para este centro
+  const { data: existente } = await supabase
+    .from('novedades')
+    .select('id')
+    .eq('centro_id', centroId)
+    .eq('tipo', 'reproceso')
+    .in('estado', ['abierta', 'en_gestion'])
+    .maybeSingle()
+
+  if (existente) return // ya existe alerta activa
+
+  // Obtener nombre del centro para el título
+  const { data: centro } = await supabase
+    .from('centros')
+    .select('nombre')
+    .eq('id', centroId)
+    .single()
+
+  await supabase.from('novedades').insert({
+    tipo:        'reproceso',
+    nivel,
+    titulo:      `${pctReprocesos}% de reprocesos en ${centro?.nombre ?? 'centro'}`,
+    descripcion: `En los últimos ${DIAS_ANALISIS} días se registraron ${inadecuados} preparaciones inadecuadas de ${total} procedimientos (${pctReprocesos}%). ${nivel === 'alto' ? 'Requiere intervención inmediata.' : 'Se recomienda revisar el protocolo de preparación.'}`,
+    centro_id:   centroId,
+    responsable: 'TQ Nacional',
+    sla_dias:    nivel === 'alto' ? 3 : 7,
+    estado:      'abierta',
+  })
+
+  revalidatePath('/tq')
+}
+
+export async function obtenerNovedades(): Promise<{
+  id: string
+  tipo: string
+  nivel: string
+  titulo: string
+  descripcion: string
+  centro: string
+  responsable: string
+  sla_dias: number
+  estado: string
+  created_at: string
+}[]> {
+  const supabase = await createServerSupabaseClient()
+
+  const { data } = await supabase
+    .from('novedades')
+    .select('*, centros(nombre)')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (!data) return []
+
+  return data.map((n) => ({
+    id:          n.id,
+    tipo:        n.tipo,
+    nivel:       n.nivel,
+    titulo:      n.titulo,
+    descripcion: n.descripcion ?? '',
+    centro:      (n.centros as { nombre: string } | null)?.nombre ?? '—',
+    responsable: n.responsable ?? '—',
+    sla_dias:    n.sla_dias ?? 7,
+    estado:      n.estado,
+    created_at:  n.created_at,
+  }))
+}
+
+export async function actualizarEstadoNovedad(
+  id: string,
+  estado: 'abierta' | 'en_gestion' | 'cerrada'
+): Promise<void> {
+  const supabase = await createServerSupabaseClient()
+  const { error } = await supabase
+    .from('novedades')
+    .update({ estado, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/tq')
 }
 
 // ================================================================

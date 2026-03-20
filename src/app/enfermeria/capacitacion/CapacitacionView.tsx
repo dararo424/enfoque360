@@ -1,30 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { PlayCircle, BookOpen, ClipboardList, Award, CheckCircle2, Lock, ChevronRight } from 'lucide-react'
+import { marcarModuloCompletado } from '@/lib/actions'
+import type { ModuloConProgreso } from '@/lib/actions'
 
-interface Modulo {
-  id: string
-  titulo: string
-  descripcion: string
-  duracion_min: number
-  tipo: 'video' | 'lectura' | 'evaluacion'
-  completado: boolean
-  puntaje: number | null
-  bloqueado: boolean
-}
-
-const MODULOS_DEMO: Modulo[] = [
-  { id: '1', titulo: 'Introducción a COLONLYTELY',       descripcion: 'Mecanismo de acción, indicaciones y contraindicaciones',              duracion_min: 20, tipo: 'video',     completado: true,  puntaje: null, bloqueado: false },
-  { id: '2', titulo: 'Protocolo de preparación',         descripcion: 'Pasos detallados para la preparación ideal del paciente',             duracion_min: 30, tipo: 'video',     completado: true,  puntaje: null, bloqueado: false },
-  { id: '3', titulo: 'Escala de Boston: calificación',   descripcion: 'Cómo evaluar y registrar la calidad según la escala de Boston',      duracion_min: 25, tipo: 'lectura',   completado: false, puntaje: null, bloqueado: false },
-  { id: '4', titulo: 'Manejo de efectos adversos',       descripcion: 'Identificación y manejo de reacciones durante la preparación',       duracion_min: 20, tipo: 'video',     completado: false, puntaje: null, bloqueado: true  },
-  { id: '5', titulo: 'Evaluación final Módulo 1',        descripcion: 'Evaluación de conocimientos sobre preparación intestinal',           duracion_min: 15, tipo: 'evaluacion', completado: false, puntaje: null, bloqueado: true  },
+// ---- Demo fallback cuando Supabase no tiene módulos ----
+const MODULOS_DEMO: ModuloConProgreso[] = [
+  { id: 'demo-1', titulo: 'Introducción a COLONLYTELY',     descripcion: 'Mecanismo de acción, indicaciones y contraindicaciones',         duracion_min: 20, tipo: 'video',     orden: 1, completado: false, puntaje: null, bloqueado: false },
+  { id: 'demo-2', titulo: 'Protocolo de preparación',       descripcion: 'Pasos detallados para la preparación ideal del paciente',        duracion_min: 30, tipo: 'video',     orden: 2, completado: false, puntaje: null, bloqueado: true  },
+  { id: 'demo-3', titulo: 'Escala de Boston: calificación', descripcion: 'Cómo evaluar y registrar la calidad según la escala de Boston', duracion_min: 25, tipo: 'lectura',   orden: 3, completado: false, puntaje: null, bloqueado: true  },
+  { id: 'demo-4', titulo: 'Manejo de efectos adversos',     descripcion: 'Identificación y manejo de reacciones durante la preparación',  duracion_min: 20, tipo: 'video',     orden: 4, completado: false, puntaje: null, bloqueado: true  },
+  { id: 'demo-5', titulo: 'Evaluación final Módulo 1',      descripcion: 'Evaluación de conocimientos sobre preparación intestinal',      duracion_min: 15, tipo: 'evaluacion', orden: 5, completado: false, puntaje: null, bloqueado: true  },
 ]
 
+const esDemo = (id: string) => id.startsWith('demo-')
+
 const TIPO_ICON = {
-  video:     <PlayCircle   className="w-5 h-5" />,
-  lectura:   <BookOpen     className="w-5 h-5" />,
+  video:     <PlayCircle    className="w-5 h-5" />,
+  lectura:   <BookOpen      className="w-5 h-5" />,
   evaluacion: <ClipboardList className="w-5 h-5" />,
 }
 const TIPO_LABEL = { video: 'Video', lectura: 'Lectura', evaluacion: 'Evaluación' }
@@ -39,32 +34,56 @@ const PREGUNTAS = [
   { id: 2, pregunta: 'La escala de Boston clasifica la preparación en cuántos segmentos:', opciones: ['2', '3', '4', '5'], correcta: 1 },
   { id: 3, pregunta: '¿Qué puntaje de la escala de Boston indica preparación adecuada?', opciones: ['≥ 3', '≥ 5', '≥ 6', '= 9'], correcta: 2 },
   { id: 4, pregunta: 'El COLONLYTELY debe consumirse preferentemente:', opciones: ['Con el estómago lleno', 'En ayunas total', 'Vía oral fraccionado', 'En bolo único'], correcta: 2 },
-  { id: 5, pregunta: '¿Cuál es la náusea el efecto adverso más frecuente?', opciones: ['Sí', 'No, es la cefalea', 'No, es el mareo', 'No, es el dolor abdominal'], correcta: 0 },
+  { id: 5, pregunta: '¿La náusea es el efecto adverso más frecuente?', opciones: ['Sí', 'No, es la cefalea', 'No, es el mareo', 'No, es el dolor abdominal'], correcta: 0 },
 ]
 
-export function CapacitacionView() {
+interface Props {
+  modulosIniciales: ModuloConProgreso[]
+}
+
+export function CapacitacionView({ modulosIniciales }: Props) {
+  const inicial = modulosIniciales.length > 0 ? modulosIniciales : MODULOS_DEMO
+  const [modulos, setModulos] = useState(inicial)
   const [moduloActivo, setModuloActivo] = useState<string | null>(null)
-  const [modulos, setModulos] = useState(MODULOS_DEMO)
   const [enEvaluacion, setEnEvaluacion] = useState(false)
   const [respuestas, setRespuestas] = useState<Record<number, number>>({})
   const [enviado, setEnviado] = useState(false)
-  const [certificado, setCertificado] = useState(false)
+  const [puntajeFinal, setPuntajeFinal] = useState<number | null>(null)
+  const [saving, startTransition] = useTransition()
+  const router = useRouter()
 
-  const completados  = modulos.filter((m) => m.completado).length
-  const total        = modulos.length
-  const pctProgreso  = Math.round((completados / total) * 100)
-  const moduloObj    = modulos.find((m) => m.id === moduloActivo)
+  const completados = modulos.filter((m) => m.completado).length
+  const total       = modulos.length
+  const pctProgreso = Math.round((completados / total) * 100)
+  const moduloObj   = modulos.find((m) => m.id === moduloActivo)
+  const todosCompletos = completados === total
 
-  function completarModulo(id: string) {
-    setModulos((prev) =>
-      prev.map((m, i) => {
-        if (m.id === id) return { ...m, completado: true }
-        // desbloquear siguiente
-        if (prev[i - 1]?.id === id) return { ...m, bloqueado: false }
+  function desbloquearSiguiente(idCompletado: string) {
+    setModulos((prev) => {
+      const idx = prev.findIndex((m) => m.id === idCompletado)
+      return prev.map((m, i) => {
+        if (m.id === idCompletado) return { ...m, completado: true }
+        if (i === idx + 1)        return { ...m, bloqueado: false }
         return m
       })
-    )
+    })
+  }
+
+  function completarModulo(id: string, puntaje?: number) {
+    desbloquearSiguiente(id)
     setModuloActivo(null)
+    setEnEvaluacion(false)
+    setRespuestas({})
+    setEnviado(false)
+
+    if (esDemo(id)) return // no persiste datos demo
+
+    startTransition(async () => {
+      try {
+        await marcarModuloCompletado(id, puntaje)
+        router.refresh()
+      } catch { /* silencioso */ }
+    })
   }
 
   function calcularPuntaje() {
@@ -75,15 +94,16 @@ export function CapacitacionView() {
 
   function enviarEvaluacion() {
     const puntaje = calcularPuntaje()
+    setPuntajeFinal(puntaje)
     setEnviado(true)
-    if (puntaje >= 80) {
-      setModulos((prev) => prev.map((m) => m.tipo === 'evaluacion' ? { ...m, completado: true, puntaje } : m))
-      if (puntaje >= 80) setCertificado(true)
+    if (puntaje >= 80 && moduloActivo) {
+      completarModulo(moduloActivo, puntaje)
     }
   }
 
-  // Pantalla de certificado
-  if (certificado) {
+  // ---- Pantalla certificado ----
+  if (todosCompletos && !moduloActivo) {
+    const mejorPuntaje = modulos.find((m) => m.tipo === 'evaluacion')?.puntaje
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="w-24 h-24 rounded-full bg-teal-light flex items-center justify-center mb-6">
@@ -91,31 +111,30 @@ export function CapacitacionView() {
         </div>
         <h2 className="text-2xl font-bold text-navy mb-2">¡Felicitaciones!</h2>
         <p className="text-gray-500 mb-1">Has completado el programa de capacitación</p>
-        <p className="text-sm text-gray-400 mb-8">Puntaje: {calcularPuntaje()}% · Módulo 1 · EMC Tecnoquímicas 2026</p>
+        {mejorPuntaje && <p className="text-sm text-gray-400 mb-8">Puntaje: {mejorPuntaje}% · Módulo 1 · EMC Tecnoquímicas 2026</p>}
         <div className="bg-white border-2 border-teal/30 rounded-2xl p-8 max-w-md w-full shadow-lg">
           <Award className="w-8 h-8 text-teal mx-auto mb-3" />
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">Certificado de Finalización</p>
           <h3 className="text-lg font-bold text-navy">Preparación Intestinal · Módulo 1</h3>
           <p className="text-sm text-gray-500 mt-1">Programa EMC Tecnoquímicas · {new Date().getFullYear()}</p>
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-teal font-medium">Emitido el {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-xs text-teal font-medium">
+              Emitido el {new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
         </div>
-        <button onClick={() => { setModuloActivo(null); setEnEvaluacion(false); setEnviado(false) }}
-          className="mt-6 text-sm text-teal font-medium hover:underline">
-          Volver al listado
-        </button>
       </div>
     )
   }
 
-  // Vista de evaluación
+  // ---- Evaluación ----
   if (enEvaluacion && moduloObj?.tipo === 'evaluacion') {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-navy">{moduloObj.titulo}</h3>
-          <button onClick={() => setEnEvaluacion(false)} className="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
+          <button onClick={() => { setEnEvaluacion(false); setRespuestas({}); setEnviado(false) }}
+            className="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
         </div>
 
         {!enviado ? (
@@ -126,7 +145,7 @@ export function CapacitacionView() {
                 <div className="space-y-2">
                   {p.opciones.map((op, i) => (
                     <button key={i} onClick={() => setRespuestas((r) => ({ ...r, [p.id]: i }))}
-                      className={`w-full text-left px-4 py-3 rounded-xl border transition-colors text-sm ${
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all text-sm ${
                         respuestas[p.id] === i
                           ? 'border-teal bg-teal-light text-teal font-medium'
                           : 'border-gray-200 hover:border-gray-300 text-gray-700'
@@ -137,30 +156,28 @@ export function CapacitacionView() {
                 </div>
               </div>
             ))}
-            <button
-              onClick={enviarEvaluacion}
+            <button onClick={enviarEvaluacion}
               disabled={Object.keys(respuestas).length < PREGUNTAS.length}
-              className="w-full py-3 rounded-xl bg-teal text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-dark transition-colors">
+              className="w-full py-3 rounded-xl bg-teal text-white font-semibold text-sm disabled:opacity-50 hover:bg-teal-dark transition-colors">
               Enviar evaluación
             </button>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            {calcularPuntaje() >= 80 ? (
+            {(puntajeFinal ?? 0) >= 80 ? (
               <>
                 <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <p className="text-2xl font-bold text-navy mb-1">{calcularPuntaje()}%</p>
-                <p className="text-gray-500">¡Aprobado! Obtienes tu certificado.</p>
-                <button onClick={() => setCertificado(true)}
-                  className="mt-6 px-6 py-2.5 bg-teal text-white rounded-xl font-semibold text-sm hover:bg-teal-dark transition-colors">
-                  Ver certificado
-                </button>
+                <p className="text-2xl font-bold text-navy mb-1">{puntajeFinal}%</p>
+                <p className="text-gray-500">¡Aprobado! Tu progreso ha sido guardado.</p>
+                {esDemo(moduloObj.id) && (
+                  <p className="text-xs text-amber-600 mt-2">Modo demo — conecta Supabase para persistir el certificado.</p>
+                )}
               </>
             ) : (
               <>
-                <p className="text-2xl font-bold text-red-500 mb-1">{calcularPuntaje()}%</p>
+                <p className="text-2xl font-bold text-red-500 mb-1">{puntajeFinal}%</p>
                 <p className="text-gray-500 mb-2">No alcanzaste el mínimo (80%). Puedes intentarlo de nuevo.</p>
-                <button onClick={() => { setRespuestas({}); setEnviado(false) }}
+                <button onClick={() => { setRespuestas({}); setEnviado(false); setPuntajeFinal(null) }}
                   className="mt-4 px-6 py-2.5 bg-teal text-white rounded-xl font-semibold text-sm hover:bg-teal-dark transition-colors">
                   Reintentar
                 </button>
@@ -172,8 +189,8 @@ export function CapacitacionView() {
     )
   }
 
-  // Vista de módulo activo (video/lectura)
-  if (moduloActivo && moduloObj) {
+  // ---- Vista módulo activo (video / lectura) ----
+  if (moduloActivo && moduloObj && moduloObj.tipo !== 'evaluacion') {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -192,49 +209,57 @@ export function CapacitacionView() {
         )}
 
         {moduloObj.tipo === 'lectura' && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 prose prose-sm max-w-none">
-            <h4 className="text-navy font-semibold">Escala de Boston para preparación colónica</h4>
-            <p className="text-gray-600">La Boston Bowel Preparation Scale (BBPS) es el estándar para evaluar la calidad de la preparación intestinal durante la colonoscopía.</p>
-            <h5 className="text-navy font-medium mt-4">Segmentos evaluados</h5>
-            <ul className="text-gray-600 space-y-1">
-              <li><strong>Colon derecho:</strong> ciego y colon ascendente</li>
-              <li><strong>Colon transverso:</strong> incluyendo flexuras</li>
-              <li><strong>Colon izquierdo:</strong> colon descendente, sigma y recto</li>
-            </ul>
-            <h5 className="text-navy font-medium mt-4">Puntuación por segmento (0-3)</h5>
-            <ul className="text-gray-600 space-y-1">
-              <li><strong>0:</strong> Segmento no preparado, mucosa no visualizable</li>
-              <li><strong>1:</strong> Porciones de mucosa visualizables, residuos que no se pueden limpiar</li>
-              <li><strong>2:</strong> Mucosa visible, residuos limpios con irrigación</li>
-              <li><strong>3:</strong> Mucosa completamente visible, sin residuos</li>
-            </ul>
-            <p className="text-gray-600 mt-4"><strong>Preparación adecuada:</strong> puntaje total ≥ 6 con ningún segmento &lt; 2.</p>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-4 text-sm text-gray-600">
+            <h4 className="text-navy font-semibold text-base">Escala de Boston para preparación colónica</h4>
+            <p>La Boston Bowel Preparation Scale (BBPS) es el estándar para evaluar la calidad de la preparación intestinal durante la colonoscopía.</p>
+            <div>
+              <h5 className="text-navy font-medium mb-2">Segmentos evaluados</h5>
+              <ul className="space-y-1 list-disc list-inside">
+                <li><strong>Colon derecho:</strong> ciego y colon ascendente</li>
+                <li><strong>Colon transverso:</strong> incluyendo flexuras</li>
+                <li><strong>Colon izquierdo:</strong> colon descendente, sigma y recto</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="text-navy font-medium mb-2">Puntuación por segmento (0–3)</h5>
+              <ul className="space-y-1 list-disc list-inside">
+                <li><strong>0:</strong> Mucosa no visualizable</li>
+                <li><strong>1:</strong> Porciones visibles, residuos que no se pueden limpiar</li>
+                <li><strong>2:</strong> Mucosa visible, residuos limpiables con irrigación</li>
+                <li><strong>3:</strong> Mucosa completamente visible, sin residuos</li>
+              </ul>
+            </div>
+            <p className="bg-teal-light border border-teal/20 rounded-xl px-4 py-3 text-teal font-medium">
+              Preparación adecuada: puntaje total ≥ 6 con ningún segmento &lt; 2
+            </p>
           </div>
         )}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm text-gray-600 mb-4">
-            {moduloObj.tipo === 'video'
-              ? 'Una vez que hayas visto el video completo, marca el módulo como completado.'
-              : 'Una vez que hayas revisado el contenido, márcalo como completado.'}
-          </p>
-          {moduloObj.tipo === 'evaluacion' ? (
-            <button onClick={() => setEnEvaluacion(true)}
-              className="w-full py-3 rounded-xl bg-teal text-white font-semibold text-sm hover:bg-teal-dark transition-colors">
-              Iniciar evaluación
-            </button>
+          {moduloObj.completado ? (
+            <p className="text-sm text-green-600 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Módulo ya completado
+            </p>
           ) : (
-            <button onClick={() => completarModulo(moduloActivo)}
-              className="w-full py-3 rounded-xl bg-teal text-white font-semibold text-sm hover:bg-teal-dark transition-colors">
-              Marcar como completado
-            </button>
+            <>
+              <p className="text-sm text-gray-600 mb-4">
+                {moduloObj.tipo === 'video' ? 'Una vez visto el video completo, márcalo como completado.' : 'Una vez revisado el contenido, márcalo como completado.'}
+              </p>
+              <button onClick={() => completarModulo(moduloActivo)} disabled={saving}
+                className="w-full py-3 rounded-xl bg-teal text-white font-semibold text-sm hover:bg-teal-dark disabled:opacity-60 transition-colors">
+                {saving ? 'Guardando...' : 'Marcar como completado'}
+              </button>
+              {esDemo(moduloObj.id) && (
+                <p className="text-xs text-amber-600 mt-2 text-center">Modo demo — el progreso no se guardará en Supabase.</p>
+              )}
+            </>
           )}
         </div>
       </div>
     )
   }
 
-  // Vista listado de módulos
+  // ---- Listado de módulos ----
   return (
     <div className="space-y-6">
       {/* Progreso general */}
@@ -247,18 +272,26 @@ export function CapacitacionView() {
           <span className="text-2xl font-bold text-teal">{pctProgreso}%</span>
         </div>
         <div className="h-2.5 bg-white/60 rounded-full overflow-hidden">
-          <div className="h-full rounded-full bg-teal transition-all" style={{ width: `${pctProgreso}%` }} />
+          <div className="h-full rounded-full bg-teal transition-all duration-500" style={{ width: `${pctProgreso}%` }} />
         </div>
-        {completados === total && (
-          <p className="text-xs text-teal font-medium mt-2">¡Programa completado! Ya puedes obtener tu certificado.</p>
+        {modulos === MODULOS_DEMO && (
+          <p className="text-xs text-amber-600 mt-2">
+            Sin módulos en Supabase — ejecuta la migración 002 para cargar el contenido real.
+          </p>
         )}
       </div>
 
-      {/* Lista de módulos */}
+      {/* Lista */}
       <div className="space-y-3">
         {modulos.map((m) => (
           <button key={m.id} disabled={m.bloqueado}
-            onClick={() => { setModuloActivo(m.id); setEnEvaluacion(m.tipo === 'evaluacion') }}
+            onClick={() => {
+              setModuloActivo(m.id)
+              setEnEvaluacion(m.tipo === 'evaluacion')
+              setRespuestas({})
+              setEnviado(false)
+              setPuntajeFinal(null)
+            }}
             className={`w-full text-left bg-white rounded-2xl border shadow-sm p-5 transition-all ${
               m.bloqueado
                 ? 'border-gray-100 opacity-50 cursor-not-allowed'
@@ -273,11 +306,11 @@ export function CapacitacionView() {
                                TIPO_COLOR[m.tipo]
               }`}>
                 {m.completado ? <CheckCircle2 className="w-5 h-5" /> :
-                 m.bloqueado  ? <Lock className="w-5 h-5" />        :
+                 m.bloqueado  ? <Lock          className="w-5 h-5" /> :
                                 TIPO_ICON[m.tipo]}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <p className="font-medium text-gray-900 text-sm">{m.titulo}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${TIPO_COLOR[m.tipo]}`}>{TIPO_LABEL[m.tipo]}</span>
                 </div>

@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation'
 import { getUsuario } from '@/lib/supabase-server'
 import { AppHeader } from '@/components/AppHeader'
+import { obtenerNovedades } from '@/lib/actions'
 import { TQPanel } from './TQPanel'
 
 export default async function TQPage() {
   const usuario = await getUsuario()
   if (!usuario) redirect('/login')
   if (usuario.rol !== 'admin') redirect('/login')
+
+  const novedades = await obtenerNovedades().catch(() => [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -16,7 +19,7 @@ export default async function TQPage() {
           <h2 className="text-xl font-bold text-navy">Panel Tecnoquímicas</h2>
           <p className="text-sm text-gray-500 mt-0.5">Vista agregada nacional</p>
         </div>
-        <TQPanel />
+        <TQPanel novedadesIniciales={novedades} />
       </main>
     </div>
   )
