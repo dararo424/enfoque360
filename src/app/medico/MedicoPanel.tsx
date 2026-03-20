@@ -14,6 +14,7 @@ export interface ProcMedico {
   producto: string
   estado: string
   prep: string
+  adenomas: number   // 0 = no detectados
 }
 
 interface Props {
@@ -52,10 +53,12 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
   }, [procedimientos, periodo])
 
   const completados = filtered.filter((p) => p.estado === 'completado')
-  const adecuados = completados.filter((p) => ['excelente', 'buena', 'regular'].includes(p.prep))
-  const reprocesos = completados.filter((p) => p.prep === 'inadecuada')
-  const pctAdecuada = completados.length > 0 ? Math.round((adecuados.length / completados.length) * 100) : 0
-  const pctReproceso = completados.length > 0 ? Math.round((reprocesos.length / completados.length) * 100) : 0
+  const adecuados    = completados.filter((p) => ['excelente', 'buena', 'regular'].includes(p.prep))
+  const reprocesos   = completados.filter((p) => p.prep === 'inadecuada')
+  const conAdenomas  = completados.filter((p) => p.adenomas > 0)
+  const pctAdecuada  = completados.length > 0 ? Math.round((adecuados.length   / completados.length) * 100) : 0
+  const pctReproceso = completados.length > 0 ? Math.round((reprocesos.length  / completados.length) * 100) : 0
+  const pctAdenomas  = completados.length > 0 ? Math.round((conAdenomas.length / completados.length) * 100) : 0
 
   // Tendencia por mes (últimos 6 meses)
   const tendencia = useMemo((): TendenciaPoint[] => {
@@ -70,13 +73,14 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
         const fd = new Date(p.fecha)
         return fd.getMonth() === m && fd.getFullYear() === y
       })
-      const adec = delMes.filter((p) => ['excelente', 'buena', 'regular'].includes(p.prep))
-      const reproc = delMes.filter((p) => p.prep === 'inadecuada')
+      const adec      = delMes.filter((p) => ['excelente', 'buena', 'regular'].includes(p.prep))
+      const reproc    = delMes.filter((p) => p.prep === 'inadecuada')
+      const adenoMes  = delMes.filter((p) => p.adenomas > 0)
       meses.push({
         mes,
-        prepAdecuada: delMes.length ? Math.round((adec.length / delMes.length) * 100) : 0,
-        deteccionAdenomas: 0,
-        reprocesos: delMes.length ? Math.round((reproc.length / delMes.length) * 100) : 0,
+        prepAdecuada:      delMes.length ? Math.round((adec.length     / delMes.length) * 100) : 0,
+        deteccionAdenomas: delMes.length ? Math.round((adenoMes.length / delMes.length) * 100) : 0,
+        reprocesos:        delMes.length ? Math.round((reproc.length   / delMes.length) * 100) : 0,
       })
     }
     return meses
@@ -147,10 +151,10 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard color="teal"   label="Procedimientos"     value={String(filtered.length)}    sub="En el período seleccionado" />
-        <KpiCard color="green"  label="% Prep. adecuada"   value={`${pctAdecuada}%`}          sub={`${adecuados.length} de ${completados.length} completados`} />
-        <KpiCard color="red"    label="% Reprocesos"        value={`${pctReproceso}%`}         sub={`${reprocesos.length} prep. inadecuadas`} />
-        <KpiCard color="navy"   label="Productos distintos" value={String(productos.length)}   sub="Tipos usados en el período" />
+        <KpiCard color="teal"   label="Procedimientos"       value={String(filtered.length)}    sub="En el período seleccionado" />
+        <KpiCard color="green"  label="% Prep. adecuada"     value={`${pctAdecuada}%`}          sub={`${adecuados.length} de ${completados.length} completados`} />
+        <KpiCard color="red"    label="% Reprocesos"         value={`${pctReproceso}%`}         sub={`${reprocesos.length} prep. inadecuadas`} />
+        <KpiCard color="purple" label="Detección adenomas"   value={`${pctAdenomas}%`}          sub={`Meta ASGE: >25% ${pctAdenomas >= 25 ? '✓' : '—'}`} />
       </div>
 
       {/* Charts row */}
@@ -159,9 +163,10 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-sm font-semibold text-navy mb-1">Tendencia · últimos 6 meses</h3>
           <p className="text-xs text-gray-400 mb-1">Preparación adecuada vs. reprocesos</p>
-          <div className="flex gap-5 mb-3">
+          <div className="flex gap-5 mb-3 flex-wrap">
             <LegendDot color="#0CA5A0" label="Prep. adecuada" />
             <LegendDot color="#ef4444" label="% Reprocesos" dashed />
+            <LegendDot color="#6366f1" label="Detección adenomas" dashed />
           </div>
           <MedicoChart data={tendencia} />
         </div>

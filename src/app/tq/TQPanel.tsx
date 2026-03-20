@@ -38,7 +38,9 @@ interface Novedad {
   centro: string; responsable: string; sla_dias: number; estado: string; created_at: string
 }
 
-export function TQPanel({ novedadesIniciales = [] }: { novedadesIniciales?: Novedad[] }) {
+type ResumenCerts = Record<string, { certificadas: number; vencenEn30: number; vencidas: number }>
+
+export function TQPanel({ novedadesIniciales = [], resumenCerts = {} }: { novedadesIniciales?: Novedad[]; resumenCerts?: ResumenCerts }) {
   const [tab, setTab] = useState('inicio')
 
   return (
@@ -64,7 +66,7 @@ export function TQPanel({ novedadesIniciales = [] }: { novedadesIniciales?: Nove
       {tab === 'analisis'       && <TQAnalisis />}
       {tab === 'novedades'      && <TQNovedades novedadesIniciales={novedadesIniciales} />}
       {tab === 'inversion'      && <TQInversion />}
-      {tab === 'capacitaciones' && <TQCapacitaciones />}
+      {tab === 'capacitaciones' && <TQCapacitaciones resumenCerts={resumenCerts} />}
     </div>
   )
 }

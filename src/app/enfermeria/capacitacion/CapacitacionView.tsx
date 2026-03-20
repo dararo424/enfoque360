@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlayCircle, BookOpen, ClipboardList, Award, CheckCircle2, Lock, ChevronRight } from 'lucide-react'
+import { PlayCircle, BookOpen, ClipboardList, Award, CheckCircle2, Lock, ChevronRight, AlertTriangle } from 'lucide-react'
 import { marcarModuloCompletado } from '@/lib/actions'
-import type { ModuloConProgreso } from '@/lib/actions'
+import type { ModuloConProgreso, EstadoCertificacion } from '@/lib/actions'
 
 // ---- Demo fallback cuando Supabase no tiene módulos ----
 const MODULOS_DEMO: ModuloConProgreso[] = [
@@ -39,9 +39,10 @@ const PREGUNTAS = [
 
 interface Props {
   modulosIniciales: ModuloConProgreso[]
+  estadoCert?: EstadoCertificacion
 }
 
-export function CapacitacionView({ modulosIniciales }: Props) {
+export function CapacitacionView({ modulosIniciales, estadoCert }: Props) {
   const inicial = modulosIniciales.length > 0 ? modulosIniciales : MODULOS_DEMO
   const [modulos, setModulos] = useState(inicial)
   const [moduloActivo, setModuloActivo] = useState<string | null>(null)
@@ -262,6 +263,12 @@ export function CapacitacionView({ modulosIniciales }: Props) {
   // ---- Listado de módulos ----
   return (
     <div className="space-y-6">
+
+      {/* Banner estado certificación */}
+      {estadoCert && (estadoCert.vigente || estadoCert.proximaAVencer || (estadoCert.diasRestantes !== null && estadoCert.diasRestantes <= 0)) && (
+        <CertBanner cert={estadoCert} />
+      )}
+
       {/* Progreso general */}
       <div className="bg-gradient-to-r from-teal/10 to-navy/5 rounded-2xl border border-teal/20 p-6">
         <div className="flex items-center justify-between mb-3">
@@ -323,6 +330,56 @@ export function CapacitacionView({ modulosIniciales }: Props) {
             </div>
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ---- Banner de estado de certificación ----
+function CertBanner({ cert }: { cert: EstadoCertificacion }) {
+  const vencida       = (cert.diasRestantes ?? 1) <= 0
+  const proximaAlta   = !vencida && (cert.diasRestantes ?? 99) <= 7
+  const fechaVence    = cert.fechaVencimiento
+    ? new Date(cert.fechaVencimiento).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
+    : null
+
+  if (vencida) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-red-700">Certificación vencida</p>
+          <p className="text-xs text-red-600 mt-0.5">
+            Tu certificación venció hace {Math.abs(cert.diasRestantes ?? 0)} días{fechaVence ? ` (${fechaVence})` : ''}. Debes completar nuevamente la evaluación para renovarla.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (proximaAlta) {
+    return (
+      <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
+        <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-orange-700">Certificación vence pronto</p>
+          <p className="text-xs text-orange-600 mt-0.5">
+            Tu certificación vence en <strong>{cert.diasRestantes} días</strong>{fechaVence ? ` (${fechaVence})` : ''}. Renueva la evaluación a tiempo.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Próxima a vencer pero con tiempo (8–30 días)
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
+      <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+      <div>
+        <p className="text-sm font-semibold text-yellow-700">Certificación vigente — próxima a vencer</p>
+        <p className="text-xs text-yellow-700 mt-0.5">
+          Vence el {fechaVence} ({cert.diasRestantes} días restantes). Planifica tu renovación.
+        </p>
       </div>
     </div>
   )

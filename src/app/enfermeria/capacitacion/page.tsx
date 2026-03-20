@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getUsuario } from '@/lib/supabase-server'
 import { AppHeader } from '@/components/AppHeader'
-import { cargarModulosCapacitacion } from '@/lib/actions'
+import { cargarModulosCapacitacion, obtenerEstadoCertificacion } from '@/lib/actions'
 import { CapacitacionView } from './CapacitacionView'
 
 export default async function CapacitacionPage() {
@@ -9,7 +9,10 @@ export default async function CapacitacionPage() {
   if (!usuario) redirect('/login')
   if (usuario.rol !== 'enfermera' && usuario.rol !== 'admin') redirect('/login')
 
-  const modulos = await cargarModulosCapacitacion()
+  const [modulos, estadoCert] = await Promise.all([
+    cargarModulosCapacitacion(),
+    obtenerEstadoCertificacion(),
+  ])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -26,7 +29,7 @@ export default async function CapacitacionPage() {
           <h2 className="text-xl font-bold text-navy">Capacitación EMC</h2>
           <p className="text-sm text-gray-500 mt-0.5">Programa de Educación Médica Continua · Tecnoquímicas</p>
         </div>
-        <CapacitacionView modulosIniciales={modulos} />
+        <CapacitacionView modulosIniciales={modulos} estadoCert={estadoCert} />
       </main>
     </div>
   )

@@ -54,8 +54,10 @@ export function MedicoChart({ data }: { data: TendenciaPoint[] }) {
         <Tooltip content={<Tip />} />
         <Area type="monotone" dataKey="prepAdecuada"     name="Prep. adecuada" stroke={TEAL}    strokeWidth={2.5} fill="url(#gradPrep)"
           dot={{ fill: TEAL, strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: TEAL, stroke: '#fff', strokeWidth: 2 }} />
-        <Area type="monotone" dataKey="reprocesos"       name="% Reprocesos"   stroke="#ef4444" strokeWidth={2}   fill="url(#gradRep)"
+        <Area type="monotone" dataKey="reprocesos"        name="% Reprocesos"        stroke="#ef4444" strokeWidth={2}   fill="url(#gradRep)"
           strokeDasharray="4 2" dot={{ fill: '#ef4444', strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }} />
+        <Area type="monotone" dataKey="deteccionAdenomas" name="Detección adenomas"  stroke="#6366f1" strokeWidth={2}   fill="none"
+          strokeDasharray="6 3" dot={{ fill: '#6366f1', strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }} />
       </AreaChart>
     </ResponsiveContainer>
   )

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { GraduationCap, CheckCircle2, Users, TrendingUp } from 'lucide-react'
+import { GraduationCap, CheckCircle2, Users, TrendingUp, AlertTriangle } from 'lucide-react'
+
+type ResumenCerts = Record<string, { certificadas: number; vencenEn30: number; vencidas: number }>
 
 interface CentroCapRow {
   centro: string
@@ -22,8 +24,12 @@ const DEMO: CentroCapRow[] = [
   { centro: 'Hospital Universitario',    ciudad: 'Manizales',   enfermeras: 3,  certificadas: 1,  modulosCompletos:  8, totalModulos: 15 },
 ]
 
-export function TQCapacitaciones() {
+export function TQCapacitaciones({ resumenCerts = {} }: { resumenCerts?: ResumenCerts }) {
   const [sortBy, setSortBy] = useState<'certificadas' | 'progreso'>('progreso')
+
+  // Alertas de certificaciones: suma total en todos los centros
+  const totalVencenEn30 = Object.values(resumenCerts).reduce((s, r) => s + r.vencenEn30, 0)
+  const totalVencidas   = Object.values(resumenCerts).reduce((s, r) => s + r.vencidas,   0)
 
   const totalEnfermeras   = DEMO.reduce((s, c) => s + c.enfermeras,   0)
   const totalCertificadas = DEMO.reduce((s, c) => s + c.certificadas, 0)
@@ -70,6 +76,22 @@ export function TQCapacitaciones() {
         </div>
       </div>
 
+      {/* Alertas certificaciones */}
+      {(totalVencidas > 0 || totalVencenEn30 > 0) && (
+        <div className={`rounded-2xl border p-4 flex items-start gap-3 ${totalVencidas > 0 ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${totalVencidas > 0 ? 'text-red-500' : 'text-yellow-500'}`} />
+          <div>
+            <p className={`text-sm font-semibold ${totalVencidas > 0 ? 'text-red-700' : 'text-yellow-700'}`}>
+              Alertas de certificación
+            </p>
+            <p className={`text-xs mt-0.5 ${totalVencidas > 0 ? 'text-red-600' : 'text-yellow-700'}`}>
+              {totalVencidas > 0 && `${totalVencidas} enfermera${totalVencidas > 1 ? 's' : ''} con certificación vencida. `}
+              {totalVencenEn30 > 0 && `${totalVencenEn30} certificación${totalVencenEn30 > 1 ? 'es' : ''} vencen en los próximos 30 días.`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Impacto clínico */}
       <div className="bg-gradient-to-r from-teal/10 to-navy/5 rounded-2xl border border-teal/20 p-6">
         <h3 className="text-sm font-semibold text-navy mb-3">Impacto clínico del programa EMC</h3>
@@ -110,7 +132,7 @@ export function TQCapacitaciones() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
-                {['Centro', 'Ciudad', 'Enfermeras', 'Certificadas', '% Certif.', 'Progreso módulos'].map((h) => (
+                {['Centro', 'Ciudad', 'Enfermeras', 'Certificadas', '% Certif.', 'Vigencia cert.', 'Progreso módulos'].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -135,6 +157,24 @@ export function TQCapacitaciones() {
                         pctCert >= 60   ? 'bg-yellow-50 text-yellow-700' :
                                           'bg-red-50 text-red-600'
                       }`}>{pctCert}%</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        // Buscar resumen por nombre del centro (aproximado, ya que no tenemos el id aquí)
+                        const r = Object.values(resumenCerts)[sorted.indexOf(c)]
+                        if (!r) return <span className="text-xs text-gray-300">—</span>
+                        if (r.vencidas > 0) return (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                            <AlertTriangle className="w-3 h-3" />{r.vencidas} vencida{r.vencidas > 1 ? 's' : ''}
+                          </span>
+                        )
+                        if (r.vencenEn30 > 0) return (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
+                            <AlertTriangle className="w-3 h-3" />Vence pronto
+                          </span>
+                        )
+                        return <span className="text-xs text-green-600 font-medium">Al día ✓</span>
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">

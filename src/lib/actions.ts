@@ -311,6 +311,161 @@ export async function verificarYGenerarNovedades(centroId: string): Promise<void
   revalidatePath('/tq')
 }
 
+// ---- Certificaciones ----
+const DIAS_VIGENCIA_CERT  = 365
+const DIAS_AVISO_VENCIMIENTO = 30
+
+export interface EstadoCertificacion {
+  vigente: boolean
+  fechaObtencion: string | null
+  fechaVencimiento: string | null
+  diasRestantes: number | null   // negativo = ya venció
+  proximaAVencer: boolean
+}
+
+/** Resumen de certificaciones por centro para la vista TQ */
+export async function obtenerResumenCertificaciones(): Promise<Record<string, {
+  certificadas: number
+  vencenEn30: number
+  vencidas: number
+}>> {
+  const supabase = await createServerSupabaseClient()
+
+  const { data } = await supabase
+    .from('progreso_capacitacion')
+    .select('usuario_id, puntaje, fecha_completado, completado, modulos_capacitacion(tipo), usuarios(centro_id)')
+    .eq('completado', true)
+
+  if (!data) return {}
+
+  const resumen: Record<string, { certificadas: number; vencenEn30: number; vencidas: number }> = {}
+
+  for (const p of data) {
+    const mod     = Array.isArray(p.modulos_capacitacion) ? p.modulos_capacitacion[0] : p.modulos_capacitacion
+    const usuario = Array.isArray(p.usuarios) ? p.usuarios[0] : p.usuarios as { centro_id: string } | null
+    if ((mod as { tipo: string } | null)?.tipo !== 'evaluacion') continue
+    if ((p.puntaje ?? 0) < 80) continue
+    if (!usuario?.centro_id || !p.fecha_completado) continue
+
+    const centroId = usuario.centro_id
+    if (!resumen[centroId]) resumen[centroId] = { certificadas: 0, vencenEn30: 0, vencidas: 0 }
+
+    const vence = new Date(p.fecha_completado)
+    vence.setDate(vence.getDate() + DIAS_VIGENCIA_CERT)
+    const dias = Math.floor((vence.getTime() - Date.now()) / 86400000)
+
+    resumen[centroId].certificadas++
+    if (dias <= 0)                     resumen[centroId].vencidas++
+    else if (dias <= DIAS_AVISO_VENCIMIENTO) resumen[centroId].vencenEn30++
+  }
+
+  return resumen
+}
+
+export async function obtenerEstadoCertificacion(): Promise<EstadoCertificacion> {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { vigente: false, fechaObtencion: null, fechaVencimiento: null, diasRestantes: null, proximaAVencer: false }
+
+  // Buscar el módulo de evaluación completado más reciente
+  const { data } = await supabase
+    .from('progreso_capacitacion')
+    .select('fecha_completado, puntaje, modulos_capacitacion(tipo)')
+    .eq('usuario_id', user.id)
+    .eq('completado', true)
+    .order('fecha_completado', { ascending: false })
+
+  const evalCompletada = data?.find((p) => {
+    const mod = Array.isArray(p.modulos_capacitacion) ? p.modulos_capacitacion[0] : p.modulos_capacitacion
+    return (mod as { tipo: string } | null)?.tipo === 'evaluacion' && (p.puntaje ?? 0) >= 80
+  })
+
+  if (!evalCompletada?.fecha_completado) {
+    return { vigente: false, fechaObtencion: null, fechaVencimiento: null, diasRestantes: null, proximaAVencer: false }
+  }
+
+  const fechaObtencion   = new Date(evalCompletada.fecha_completado)
+  const fechaVencimiento = new Date(fechaObtencion)
+  fechaVencimiento.setDate(fechaVencimiento.getDate() + DIAS_VIGENCIA_CERT)
+
+  const diasRestantes = Math.floor((fechaVencimiento.getTime() - Date.now()) / 86400000)
+
+  return {
+    vigente:         diasRestantes > 0,
+    fechaObtencion:  fechaObtencion.toISOString(),
+    fechaVencimiento: fechaVencimiento.toISOString(),
+    diasRestantes,
+    proximaAVencer:  diasRestantes >= 0 && diasRestantes <= DIAS_AVISO_VENCIMIENTO,
+  }
+}
+
+export async function verificarCertificacionesVenciendo(): Promise<void> {
+  const supabase = await createServerSupabaseClient()
+
+  const limiteAviso  = new Date(); limiteAviso.setDate(limiteAviso.getDate() + DIAS_AVISO_VENCIMIENTO)
+  const limiteVencimiento = new Date(Date.now())
+
+  // Buscar evaluaciones completadas cuyo vencimiento cae en los próximos 30 días o ya venció
+  const fechaCorte = new Date(); fechaCorte.setDate(fechaCorte.getDate() - (DIAS_VIGENCIA_CERT - DIAS_AVISO_VENCIMIENTO))
+
+  const { data: progresos } = await supabase
+    .from('progreso_capacitacion')
+    .select('usuario_id, fecha_completado, puntaje, modulos_capacitacion(tipo), usuarios(nombre, centro_id)')
+    .eq('completado', true)
+    .gte('fecha_completado', new Date(Date.now() - DIAS_VIGENCIA_CERT * 86400000).toISOString())
+    .lte('fecha_completado', fechaCorte.toISOString())
+
+  if (!progresos) return
+
+  for (const p of progresos) {
+    const mod = Array.isArray(p.modulos_capacitacion) ? p.modulos_capacitacion[0] : p.modulos_capacitacion
+    if ((mod as { tipo: string } | null)?.tipo !== 'evaluacion') continue
+    if ((p.puntaje ?? 0) < 80) continue
+
+    const usuario  = Array.isArray(p.usuarios) ? p.usuarios[0] : p.usuarios as { nombre: string; centro_id: string } | null
+    if (!usuario?.centro_id) continue
+
+    const fechaVence = new Date(p.fecha_completado)
+    fechaVence.setDate(fechaVence.getDate() + DIAS_VIGENCIA_CERT)
+    const diasRestantes = Math.floor((fechaVence.getTime() - Date.now()) / 86400000)
+
+    if (diasRestantes > DIAS_AVISO_VENCIMIENTO) continue
+
+    // Verificar si ya existe novedad activa de certificación para este usuario/centro
+    const { data: existente } = await supabase
+      .from('novedades')
+      .select('id')
+      .eq('centro_id', usuario.centro_id)
+      .eq('tipo', 'capacitacion')
+      .in('estado', ['abierta', 'en_gestion'])
+      .ilike('titulo', `%${usuario.nombre}%`)
+      .maybeSingle()
+
+    if (existente) continue
+
+    const nivel = diasRestantes <= 0 ? 'alto' : diasRestantes <= 7 ? 'medio' : 'bajo'
+    const titulo = diasRestantes <= 0
+      ? `Certificación vencida: ${usuario.nombre}`
+      : `Certificación por vencer: ${usuario.nombre}`
+    const descripcion = diasRestantes <= 0
+      ? `La certificación EMC de ${usuario.nombre} venció hace ${Math.abs(diasRestantes)} días. Debe renovar el módulo de evaluación.`
+      : `La certificación EMC de ${usuario.nombre} vence en ${diasRestantes} días (${fechaVence.toLocaleDateString('es-CO')}).`
+
+    await supabase.from('novedades').insert({
+      tipo:        'capacitacion',
+      nivel,
+      titulo,
+      descripcion,
+      centro_id:   usuario.centro_id,
+      responsable: 'TQ Nacional',
+      sla_dias:    diasRestantes <= 0 ? 3 : 14,
+      estado:      'abierta',
+    })
+  }
+
+  revalidatePath('/tq')
+}
+
 export async function obtenerNovedades(): Promise<{
   id: string
   tipo: string

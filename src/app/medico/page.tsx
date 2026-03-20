@@ -6,16 +6,16 @@ import type { ProcMedico } from './MedicoPanel'
 
 // ---- Demo data ----
 const DEMO: ProcMedico[] = [
-  { id: '1', paciente: 'Luis Torres Pérez',   cedula: '74.829.301', fecha: '2026-03-18T08:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'excelente' },
-  { id: '2', paciente: 'Sandra Ríos Cardona', cedula: '52.631.204', fecha: '2026-03-17T09:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'buena' },
-  { id: '3', paciente: 'Felipe Mora Agudelo', cedula: '1.098.345',  fecha: '2026-03-17T10:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'regular' },
-  { id: '4', paciente: 'Diana Zuluaga Gómez', cedula: '43.812.760', fecha: '2026-03-16T08:00:00', producto: 'NULYTELY',    estado: 'completado', prep: 'buena' },
-  { id: '5', paciente: 'Andrés Patiño López', cedula: '80.127.543', fecha: '2026-03-15T09:30:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'inadecuada' },
-  { id: '6', paciente: 'Carmen López Silva',  cedula: '65.234.112', fecha: '2026-02-28T08:00:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'buena' },
-  { id: '7', paciente: 'Roberto Díaz Vera',   cedula: '91.827.364', fecha: '2026-02-20T10:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'excelente' },
-  { id: '8', paciente: 'Ana Martínez Roa',    cedula: '28.374.619', fecha: '2026-02-10T09:00:00', producto: 'NULYTELY',    estado: 'completado', prep: 'inadecuada' },
-  { id: '9', paciente: 'Jorge Herrera P.',    cedula: '17.384.920', fecha: '2026-01-25T08:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'buena' },
-  { id:'10', paciente: 'María Suárez C.',     cedula: '33.192.478', fecha: '2026-01-15T11:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'regular' },
+  { id: '1', paciente: 'Luis Torres Pérez',   cedula: '74.829.301', fecha: '2026-03-18T08:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'excelente',  adenomas: 2 },
+  { id: '2', paciente: 'Sandra Ríos Cardona', cedula: '52.631.204', fecha: '2026-03-17T09:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'buena',       adenomas: 0 },
+  { id: '3', paciente: 'Felipe Mora Agudelo', cedula: '1.098.345',  fecha: '2026-03-17T10:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'regular',     adenomas: 1 },
+  { id: '4', paciente: 'Diana Zuluaga Gómez', cedula: '43.812.760', fecha: '2026-03-16T08:00:00', producto: 'NULYTELY',    estado: 'completado', prep: 'buena',       adenomas: 0 },
+  { id: '5', paciente: 'Andrés Patiño López', cedula: '80.127.543', fecha: '2026-03-15T09:30:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'inadecuada',  adenomas: 0 },
+  { id: '6', paciente: 'Carmen López Silva',  cedula: '65.234.112', fecha: '2026-02-28T08:00:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'buena',       adenomas: 1 },
+  { id: '7', paciente: 'Roberto Díaz Vera',   cedula: '91.827.364', fecha: '2026-02-20T10:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'excelente',   adenomas: 3 },
+  { id: '8', paciente: 'Ana Martínez Roa',    cedula: '28.374.619', fecha: '2026-02-10T09:00:00', producto: 'NULYTELY',    estado: 'completado', prep: 'inadecuada',  adenomas: 0 },
+  { id: '9', paciente: 'Jorge Herrera P.',    cedula: '17.384.920', fecha: '2026-01-25T08:30:00', producto: 'COLONLYTELY', estado: 'completado', prep: 'buena',       adenomas: 0 },
+  { id:'10', paciente: 'María Suárez C.',     cedula: '33.192.478', fecha: '2026-01-15T11:00:00', producto: 'TRAVAD PIK',  estado: 'completado', prep: 'regular',     adenomas: 1 },
 ]
 
 export default async function MedicoPage() {
@@ -42,7 +42,8 @@ export default async function MedicoPage() {
           fecha: p.fecha,
           producto: p.producto,
           estado: p.estado,
-          prep: ind.preparacion ?? '',
+          prep:     ind.preparacion ?? '',
+          adenomas: Number(ind.adenomas ?? 0),
         }
       })
     }
