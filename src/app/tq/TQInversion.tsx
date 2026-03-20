@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { Download } from 'lucide-react'
 import { exportarCSV } from '@/lib/export'
 
+interface ProductoMix { producto: string; cantidad: number }
+
 interface InversionRow {
   medico: string
   centro: string
@@ -13,18 +15,47 @@ interface InversionRow {
   procedimientos: number
   monto: number
   rendimiento: number // procedimientos / capacitaciones
+  mezcla: ProductoMix[]
 }
 
 const DEMO: InversionRow[] = [
-  { medico: 'Dr. Carlos Hernández',   centro: 'Clínica Santa Fe',          regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 4, procedimientos: 52, monto: 1200000, rendimiento: 13 },
-  { medico: 'Dra. Laura Martínez',    centro: 'Clínica Santa Fe',          regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 3, procedimientos: 38, monto: 900000,  rendimiento: 12.7 },
-  { medico: 'Dr. Andrés Torres',      centro: 'Hospital San Vicente',      regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 5, procedimientos: 48, monto: 1500000, rendimiento: 9.6 },
-  { medico: 'Dra. Sofía Ríos',        centro: 'Hospital San Vicente',      regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 2, procedimientos: 30, monto: 600000,  rendimiento: 15 },
-  { medico: 'Dr. Felipe Castro',      centro: 'Fundación Cardiovascular',  regional: 'Nororiente',   periodo: '2026-Q1', capacitaciones: 3, procedimientos: 35, monto: 900000,  rendimiento: 11.7 },
-  { medico: 'Dra. Paola Gómez',       centro: 'Clínica del Country',       regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 4, procedimientos: 43, monto: 1200000, rendimiento: 10.75 },
-  { medico: 'Dr. Miguel Suárez',      centro: 'Centro Médico Imbanaco',    regional: 'Suroccidente', periodo: '2026-Q1', capacitaciones: 2, procedimientos: 25, monto: 600000,  rendimiento: 12.5 },
-  { medico: 'Dra. Claudia Vargas',    centro: 'Clínica Medellín',          regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 6, procedimientos: 58, monto: 1800000, rendimiento: 9.7 },
+  { medico: 'Dr. Carlos Hernández',   centro: 'Clínica Santa Fe',          regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 4, procedimientos: 52, monto: 1200000, rendimiento: 13,    mezcla: [{ producto: 'COLONLYTELY', cantidad: 30 }, { producto: 'TRAVAD PIK', cantidad: 22 }] },
+  { medico: 'Dra. Laura Martínez',    centro: 'Clínica Santa Fe',          regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 3, procedimientos: 38, monto: 900000,  rendimiento: 12.7,  mezcla: [{ producto: 'TRAVAD PIK', cantidad: 25 }, { producto: 'NULYTELY', cantidad: 13 }] },
+  { medico: 'Dr. Andrés Torres',      centro: 'Hospital San Vicente',      regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 5, procedimientos: 48, monto: 1500000, rendimiento: 9.6,   mezcla: [{ producto: 'TRAVAD PIK', cantidad: 28 }, { producto: 'COLONLYTELY', cantidad: 20 }] },
+  { medico: 'Dra. Sofía Ríos',        centro: 'Hospital San Vicente',      regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 2, procedimientos: 30, monto: 600000,  rendimiento: 15,    mezcla: [{ producto: 'COLONLYTELY', cantidad: 18 }, { producto: 'NULYTELY', cantidad: 12 }] },
+  { medico: 'Dr. Felipe Castro',      centro: 'Fundación Cardiovascular',  regional: 'Nororiente',   periodo: '2026-Q1', capacitaciones: 3, procedimientos: 35, monto: 900000,  rendimiento: 11.7,  mezcla: [{ producto: 'COLONLYTELY', cantidad: 35 }] },
+  { medico: 'Dra. Paola Gómez',       centro: 'Clínica del Country',       regional: 'Centro',       periodo: '2026-Q1', capacitaciones: 4, procedimientos: 43, monto: 1200000, rendimiento: 10.75, mezcla: [{ producto: 'NULYTELY', cantidad: 25 }, { producto: 'TRAVAD PIK', cantidad: 18 }] },
+  { medico: 'Dr. Miguel Suárez',      centro: 'Centro Médico Imbanaco',    regional: 'Suroccidente', periodo: '2026-Q1', capacitaciones: 2, procedimientos: 25, monto: 600000,  rendimiento: 12.5,  mezcla: [{ producto: 'TRAVAD PIK', cantidad: 25 }] },
+  { medico: 'Dra. Claudia Vargas',    centro: 'Clínica Medellín',          regional: 'Antioquia',    periodo: '2026-Q1', capacitaciones: 6, procedimientos: 58, monto: 1800000, rendimiento: 9.7,   mezcla: [{ producto: 'TRAVAD PIK', cantidad: 32 }, { producto: 'COLONLYTELY', cantidad: 26 }] },
 ]
+
+const MIX_COLORS: Record<string, string> = {
+  'COLONLYTELY': '#0CA5A0',
+  'TRAVAD PIK':  '#0F2D52',
+  'NULYTELY':    '#6366f1',
+}
+
+function MixBar({ mezcla, total }: { mezcla: ProductoMix[]; total: number }) {
+  return (
+    <div className="flex flex-col gap-1 min-w-32">
+      <div className="flex h-2 rounded-full overflow-hidden gap-px">
+        {mezcla.map((m) => (
+          <div key={m.producto}
+            style={{ width: `${Math.round((m.cantidad / total) * 100)}%`, backgroundColor: MIX_COLORS[m.producto] ?? '#94a3b8' }}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        {mezcla.map((m) => (
+          <span key={m.producto} className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: MIX_COLORS[m.producto] ?? '#94a3b8' }} />
+            {m.producto} {Math.round((m.cantidad / total) * 100)}%
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const PERIODOS = ['2026-Q1', '2025-Q4', '2025-Q3', '2025-Q2']
 
@@ -56,6 +87,7 @@ export function TQInversion() {
         Procedimientos: r.procedimientos,
         'Monto invertido': r.monto,
         'Rendimiento (proc/cap)': r.rendimiento,
+        'Mezcla de productos': r.mezcla.map((m) => `${m.producto}:${m.cantidad}`).join(' | '),
       })),
       `inversion_emc_${periodo}.csv`
     )
@@ -119,7 +151,7 @@ export function TQInversion() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
-                {['Médico', 'Centro', 'Regional', 'Capacitaciones', 'Procedimientos', 'Rendimiento', 'Inversión'].map((h) => (
+                {['Médico', 'Centro', 'Regional', 'Capacitaciones', 'Procedimientos', 'Rendimiento', 'Inversión', 'Mezcla de productos'].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -145,10 +177,13 @@ export function TQInversion() {
                   <td className="px-6 py-4 font-medium text-gray-900">
                     ${(r.monto / 1000000).toFixed(1)}M
                   </td>
+                  <td className="px-6 py-4">
+                    <MixBar mezcla={r.mezcla} total={r.procedimientos} />
+                  </td>
                 </tr>
               ))}
               {filtrados.length === 0 && (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-xs text-gray-400">Sin datos para el período seleccionado</td></tr>
+                <tr><td colSpan={8} className="px-6 py-8 text-center text-xs text-gray-400">Sin datos para el período seleccionado</td></tr>
               )}
             </tbody>
           </table>

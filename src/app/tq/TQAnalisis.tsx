@@ -10,6 +10,7 @@ interface Fila {
   regional: string
   producto: string
   mes: string
+  edadGrupo: string
   procedimientos: number
   pctAdecuada: number
   pctReprocesos: number
@@ -17,27 +18,40 @@ interface Fila {
 
 // Demo data
 const DATOS: Fila[] = [
-  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Feb', procedimientos: 48, pctAdecuada: 92, pctReprocesos: 8  },
-  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'TRAVAD PIK',  mes: 'Feb', procedimientos: 36, pctAdecuada: 89, pctReprocesos: 11 },
-  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Mar', procedimientos: 52, pctAdecuada: 93, pctReprocesos: 7  },
-  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Feb', procedimientos: 40, pctAdecuada: 87, pctReprocesos: 13 },
-  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'NULYTELY',    mes: 'Feb', procedimientos: 28, pctAdecuada: 85, pctReprocesos: 15 },
-  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Mar', procedimientos: 45, pctAdecuada: 88, pctReprocesos: 12 },
-  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Feb', procedimientos: 30, pctAdecuada: 83, pctReprocesos: 17 },
-  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Mar', procedimientos: 35, pctAdecuada: 86, pctReprocesos: 14 },
-  { centro: 'Clínica del Country',      ciudad: 'Bogotá',      regional: 'Centro',       producto: 'NULYTELY',    mes: 'Mar', procedimientos: 22, pctAdecuada: 82, pctReprocesos: 18 },
-  { centro: 'Centro Médico Imbanaco',   ciudad: 'Cali',        regional: 'Suroccidente', producto: 'TRAVAD PIK',  mes: 'Mar', procedimientos: 38, pctAdecuada: 80, pctReprocesos: 20 },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Feb', edadGrupo: '50-59', procedimientos: 22, pctAdecuada: 92, pctReprocesos: 8  },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Feb', edadGrupo: '60-69', procedimientos: 18, pctAdecuada: 91, pctReprocesos: 9  },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Feb', edadGrupo: '≥70',   procedimientos:  8, pctAdecuada: 88, pctReprocesos: 12 },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'TRAVAD PIK',  mes: 'Feb', edadGrupo: '50-59', procedimientos: 20, pctAdecuada: 90, pctReprocesos: 10 },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'TRAVAD PIK',  mes: 'Feb', edadGrupo: '60-69', procedimientos: 16, pctAdecuada: 87, pctReprocesos: 13 },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Mar', edadGrupo: '50-59', procedimientos: 28, pctAdecuada: 94, pctReprocesos: 6  },
+  { centro: 'Clínica Santa Fe',         ciudad: 'Bogotá',      regional: 'Centro',       producto: 'COLONLYTELY', mes: 'Mar', edadGrupo: '60-69', procedimientos: 24, pctAdecuada: 92, pctReprocesos: 8  },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Feb', edadGrupo: '40-49', procedimientos: 15, pctAdecuada: 89, pctReprocesos: 11 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Feb', edadGrupo: '50-59', procedimientos: 18, pctAdecuada: 87, pctReprocesos: 13 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Feb', edadGrupo: '≥70',   procedimientos:  7, pctAdecuada: 82, pctReprocesos: 18 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'NULYTELY',    mes: 'Feb', edadGrupo: '50-59', procedimientos: 15, pctAdecuada: 86, pctReprocesos: 14 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'NULYTELY',    mes: 'Feb', edadGrupo: '60-69', procedimientos: 13, pctAdecuada: 84, pctReprocesos: 16 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Mar', edadGrupo: '50-59', procedimientos: 25, pctAdecuada: 89, pctReprocesos: 11 },
+  { centro: 'Hospital San Vicente',     ciudad: 'Medellín',    regional: 'Antioquia',    producto: 'TRAVAD PIK',  mes: 'Mar', edadGrupo: '60-69', procedimientos: 20, pctAdecuada: 87, pctReprocesos: 13 },
+  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Feb', edadGrupo: '50-59', procedimientos: 17, pctAdecuada: 84, pctReprocesos: 16 },
+  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Feb', edadGrupo: '60-69', procedimientos: 13, pctAdecuada: 82, pctReprocesos: 18 },
+  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Mar', edadGrupo: '50-59', procedimientos: 20, pctAdecuada: 87, pctReprocesos: 13 },
+  { centro: 'Fundación Cardiovascular', ciudad: 'Bucaramanga', regional: 'Nororiente',   producto: 'COLONLYTELY', mes: 'Mar', edadGrupo: '60-69', procedimientos: 15, pctAdecuada: 85, pctReprocesos: 15 },
+  { centro: 'Clínica del Country',      ciudad: 'Bogotá',      regional: 'Centro',       producto: 'NULYTELY',    mes: 'Mar', edadGrupo: '40-49', procedimientos: 10, pctAdecuada: 85, pctReprocesos: 15 },
+  { centro: 'Clínica del Country',      ciudad: 'Bogotá',      regional: 'Centro',       producto: 'NULYTELY',    mes: 'Mar', edadGrupo: '50-59', procedimientos: 12, pctAdecuada: 80, pctReprocesos: 20 },
+  { centro: 'Centro Médico Imbanaco',   ciudad: 'Cali',        regional: 'Suroccidente', producto: 'TRAVAD PIK',  mes: 'Mar', edadGrupo: '50-59', procedimientos: 20, pctAdecuada: 81, pctReprocesos: 19 },
+  { centro: 'Centro Médico Imbanaco',   ciudad: 'Cali',        regional: 'Suroccidente', producto: 'TRAVAD PIK',  mes: 'Mar', edadGrupo: '60-69', procedimientos: 18, pctAdecuada: 79, pctReprocesos: 21 },
 ]
 
-type DimKey = 'centro' | 'ciudad' | 'regional' | 'producto' | 'mes'
+type DimKey = 'centro' | 'ciudad' | 'regional' | 'producto' | 'mes' | 'edadGrupo'
 type MetricKey = 'procedimientos' | 'pctAdecuada' | 'pctReprocesos'
 
 const DIMS: { key: DimKey; label: string }[] = [
-  { key: 'regional', label: 'Regional' },
-  { key: 'ciudad',   label: 'Ciudad'   },
-  { key: 'centro',   label: 'Centro'   },
-  { key: 'producto', label: 'Producto' },
-  { key: 'mes',      label: 'Mes'      },
+  { key: 'regional',  label: 'Regional'    },
+  { key: 'ciudad',    label: 'Ciudad'      },
+  { key: 'centro',    label: 'Centro'      },
+  { key: 'producto',  label: 'Producto'    },
+  { key: 'mes',       label: 'Mes'         },
+  { key: 'edadGrupo', label: 'Grupo etario'},
 ]
 
 const METRICS: { key: MetricKey; label: string; format: (v: number) => string }[] = [

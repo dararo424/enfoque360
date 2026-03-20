@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Download, Calendar } from 'lucide-react'
 import { MedicoChart, ProductoChart, HoraChart } from './MedicoCharts'
 import type { TendenciaPoint, ProductoPoint, HoraPoint } from './MedicoCharts'
-import { exportarCSV } from '@/lib/export'
+import { exportarCSV, exportarPDF } from '@/lib/export'
 
 export interface ProcMedico {
   id: string
@@ -122,6 +122,23 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
     )
   }
 
+  function descargarPDF() {
+    const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long' })
+    exportarPDF({
+      titulo: `Reporte Médico · ${nombreMedico}`,
+      subtitulo: `${centraNombre} · ${fecha} · ${PERIODOS.find((p) => p.months === periodo)?.label ?? ''}`,
+      columnas: ['Paciente', 'Cédula', 'Fecha', 'Producto', 'Preparación', 'Estado'],
+      filas: recientes.map((p) => [
+        p.paciente, p.cedula,
+        new Date(p.fecha).toLocaleDateString('es-CO'),
+        p.producto,
+        PREP_LABEL[p.prep] ?? p.prep,
+        p.estado === 'completado' ? 'Completado' : p.estado === 'en_curso' ? 'En curso' : 'Programado',
+      ]),
+      nombreArchivo: `procedimientos_${nombreMedico.replace(/\s+/g, '_')}.pdf`,
+    })
+  }
+
   const recientes = [...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 10)
 
   return (
@@ -141,12 +158,20 @@ export function MedicoPanel({ procedimientos, nombreMedico, centraNombre }: Prop
             {p.label}
           </button>
         ))}
-        <button onClick={descargar}
-          className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-navy border border-navy/20 hover:bg-navy/5 transition-colors px-3 py-1.5 rounded-full"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Exportar CSV
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button onClick={descargar}
+            className="flex items-center gap-1.5 text-xs font-semibold text-navy border border-navy/20 hover:bg-navy/5 transition-colors px-3 py-1.5 rounded-full"
+          >
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </button>
+          <button onClick={descargarPDF}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-navy hover:bg-navy/90 transition-colors px-3 py-1.5 rounded-full"
+          >
+            <Download className="w-3.5 h-3.5" />
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}

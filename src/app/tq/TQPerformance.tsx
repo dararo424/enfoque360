@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Download } from 'lucide-react'
 import { TendenciaChart, ProductosChart } from './TQCharts'
-import { exportarCSV } from '@/lib/export'
+import { exportarCSV, exportarPDF } from '@/lib/export'
 
 export interface CentroPerf {
   nombre: string
@@ -69,6 +69,17 @@ export function TQPerformance({ centros = CENTROS_DEMO }: { centros?: CentroPerf
     )
   }
 
+  function descargarPDF() {
+    const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long' })
+    exportarPDF({
+      titulo: 'Performance Nacional · Enfoque 360',
+      subtitulo: `Generado el ${fecha}${regional ? ` · Regional: ${regional}` : ''}${ciudad ? ` · Ciudad: ${ciudad}` : ''}`,
+      columnas: ['Centro', 'Ciudad', 'Regional', 'Procedimientos', '% Adecuada', '% Reprocesos'],
+      filas: filtrados.map((c) => [c.nombre, c.ciudad, c.regional, c.procedimientos, `${c.pctAdecuada}%`, `${c.pctReprocesos}%`]),
+      nombreArchivo: 'performance_nacional.pdf',
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Filtros */}
@@ -97,11 +108,18 @@ export function TQPerformance({ centros = CENTROS_DEMO }: { centros?: CentroPerf
             {['TRAVAD PIK', 'COLONLYTELY', 'NULYTELY'].map((p) => <option key={p}>{p}</option>)}
           </select>
         </div>
-        <button onClick={descargar}
-          className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-navy border border-navy/20 hover:bg-navy/5 px-3 py-2 rounded-xl transition-colors">
-          <Download className="w-3.5 h-3.5" />
-          Exportar CSV
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button onClick={descargar}
+            className="flex items-center gap-1.5 text-xs font-semibold text-navy border border-navy/20 hover:bg-navy/5 px-3 py-2 rounded-xl transition-colors">
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </button>
+          <button onClick={descargarPDF}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-navy hover:bg-navy/90 px-3 py-2 rounded-xl transition-colors">
+            <Download className="w-3.5 h-3.5" />
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* Charts */}
