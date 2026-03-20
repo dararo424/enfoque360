@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutDashboard, BarChart3, Table2, Bell, DollarSign, GraduationCap } from 'lucide-react'
+import { LayoutDashboard, BarChart3, Table2, Bell, DollarSign, GraduationCap, MapPin } from 'lucide-react'
 import { Building2, Users, CheckCircle2, Award } from 'lucide-react'
 import { TendenciaChart, ProductosChart } from './TQCharts'
 import { TQPerformance } from './TQPerformance'
@@ -9,6 +9,7 @@ import { TQAnalisis } from './TQAnalisis'
 import { TQNovedades } from './TQNovedades'
 import { TQInversion } from './TQInversion'
 import { TQCapacitaciones } from './TQCapacitaciones'
+import { TQMapa } from './TQMapa'
 
 const TENDENCIA = [
   { mes: 'Oct', pct: 78 },
@@ -31,6 +32,7 @@ const TABS = [
   { id: 'novedades',       label: 'Novedades',      icon: <Bell className="w-4 h-4" /> },
   { id: 'inversion',       label: 'Inversión EMC',  icon: <DollarSign className="w-4 h-4" /> },
   { id: 'capacitaciones',  label: 'Capacitaciones', icon: <GraduationCap className="w-4 h-4" /> },
+  { id: 'mapa',            label: 'Cobertura',      icon: <MapPin className="w-4 h-4" /> },
 ]
 
 interface Novedad {
@@ -67,6 +69,7 @@ export function TQPanel({ novedadesIniciales = [], resumenCerts = {} }: { noveda
       {tab === 'novedades'      && <TQNovedades novedadesIniciales={novedadesIniciales} />}
       {tab === 'inversion'      && <TQInversion />}
       {tab === 'capacitaciones' && <TQCapacitaciones resumenCerts={resumenCerts} />}
+      {tab === 'mapa'           && <TQMapa />}
     </div>
   )
 }

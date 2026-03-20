@@ -158,17 +158,22 @@ interface CentroCapRow {
   certificadas: number
   modulosCompletos: number
   totalModulos: number
+  ultimaActividad: string   // ISO date string
 }
 
 const DEMO: CentroCapRow[] = [
-  { centro: 'Clínica Santa Fe',          ciudad: 'Bogotá',      enfermeras: 8,  certificadas: 7,  modulosCompletos: 35, totalModulos: 40 },
-  { centro: 'Hospital San Vicente',      ciudad: 'Medellín',    enfermeras: 6,  certificadas: 4,  modulosCompletos: 24, totalModulos: 30 },
-  { centro: 'Fundación Cardiovascular',  ciudad: 'Bucaramanga', enfermeras: 4,  certificadas: 4,  modulosCompletos: 20, totalModulos: 20 },
-  { centro: 'Clínica del Country',       ciudad: 'Bogotá',      enfermeras: 5,  certificadas: 3,  modulosCompletos: 19, totalModulos: 25 },
-  { centro: 'Centro Médico Imbanaco',    ciudad: 'Cali',        enfermeras: 4,  certificadas: 2,  modulosCompletos: 13, totalModulos: 20 },
-  { centro: 'Clínica Medellín',          ciudad: 'Medellín',    enfermeras: 6,  certificadas: 6,  modulosCompletos: 30, totalModulos: 30 },
-  { centro: 'Hospital Universitario',    ciudad: 'Manizales',   enfermeras: 3,  certificadas: 1,  modulosCompletos:  8, totalModulos: 15 },
+  { centro: 'Clínica Santa Fe',          ciudad: 'Bogotá',      enfermeras: 8,  certificadas: 7,  modulosCompletos: 35, totalModulos: 40, ultimaActividad: '2026-03-18' },
+  { centro: 'Hospital San Vicente',      ciudad: 'Medellín',    enfermeras: 6,  certificadas: 4,  modulosCompletos: 24, totalModulos: 30, ultimaActividad: '2026-03-15' },
+  { centro: 'Fundación Cardiovascular',  ciudad: 'Bucaramanga', enfermeras: 4,  certificadas: 4,  modulosCompletos: 20, totalModulos: 20, ultimaActividad: '2026-03-10' },
+  { centro: 'Clínica del Country',       ciudad: 'Bogotá',      enfermeras: 5,  certificadas: 3,  modulosCompletos: 19, totalModulos: 25, ultimaActividad: '2026-03-05' },
+  { centro: 'Centro Médico Imbanaco',    ciudad: 'Cali',        enfermeras: 4,  certificadas: 2,  modulosCompletos: 13, totalModulos: 20, ultimaActividad: '2026-02-20' },
+  { centro: 'Clínica Medellín',          ciudad: 'Medellín',    enfermeras: 6,  certificadas: 6,  modulosCompletos: 30, totalModulos: 30, ultimaActividad: '2026-03-19' },
+  { centro: 'Hospital Universitario',    ciudad: 'Manizales',   enfermeras: 3,  certificadas: 1,  modulosCompletos:  8, totalModulos: 15, ultimaActividad: '2026-02-10' },
 ]
+
+function diasDesde(fecha: string): number {
+  return Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000)
+}
 
 export function TQCapacitaciones({ resumenCerts = {} }: { resumenCerts?: ResumenCerts }) {
   const [sortBy, setSortBy] = useState<'certificadas' | 'progreso'>('progreso')
@@ -278,7 +283,7 @@ export function TQCapacitaciones({ resumenCerts = {} }: { resumenCerts?: Resumen
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
-                {['Centro', 'Ciudad', 'Enfermeras', 'Certificadas', '% Certif.', 'Vigencia cert.', 'Progreso módulos'].map((h) => (
+                {['Centro', 'Ciudad', 'Enfermeras', 'Certificadas', '% Certif.', 'Vigencia cert.', 'Progreso módulos', 'Última actividad'].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -332,6 +337,19 @@ export function TQCapacitaciones({ resumenCerts = {} }: { resumenCerts?: Resumen
                           {c.modulosCompletos}/{c.totalModulos}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const dias = diasDesde(c.ultimaActividad)
+                        const label = dias === 0 ? 'Hoy' : dias === 1 ? 'Ayer' : `Hace ${dias} días`
+                        const color = dias <= 7 ? 'text-green-600' : dias <= 30 ? 'text-yellow-600' : 'text-red-500'
+                        return (
+                          <div>
+                            <p className={`text-xs font-medium ${color}`}>{label}</p>
+                            <p className="text-xs text-gray-400">{new Date(c.ultimaActividad).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          </div>
+                        )
+                      })()}
                     </td>
                   </tr>
                 )

@@ -81,6 +81,70 @@ export async function registrarPreparacionPaciente(data: {
   return { id: `ENF-${paciente.id.split('-')[0].toUpperCase()}` }
 }
 
+export async function obtenerProximoProcedimientoPaciente(): Promise<{
+  id: string
+  fecha: string
+  protocolo_confirmado: boolean
+  archivo_url: string | null
+} | null> {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data: pac } = await supabase
+      .from('pacientes')
+      .select('id')
+      .eq('usuario_id', user.id)
+      .maybeSingle()
+    if (!pac) return null
+
+    const { data } = await supabase
+      .from('procedimientos')
+      .select('id, fecha, indicadores')
+      .eq('paciente_id', pac.id)
+      .eq('estado', 'programado')
+      .gte('fecha', new Date().toISOString())
+      .order('fecha', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data) return null
+    const ind = (data.indicadores ?? {}) as Record<string, unknown>
+    return {
+      id: data.id,
+      fecha: data.fecha,
+      protocolo_confirmado: Boolean(ind.protocolo_confirmado),
+      archivo_url: (ind.archivo_protocolo as string | null) ?? null,
+    }
+  } catch { return null }
+}
+
+export async function confirmarProtocolo(procedimientoId: string): Promise<void> {
+  if (!esUUID(procedimientoId)) return
+  const supabase = await createServerSupabaseClient()
+
+  const { data: actual } = await supabase
+    .from('procedimientos')
+    .select('indicadores')
+    .eq('id', procedimientoId)
+    .single()
+
+  await supabase
+    .from('procedimientos')
+    .update({
+      indicadores: {
+        ...(actual?.indicadores as Record<string, unknown> ?? {}),
+        protocolo_confirmado: true,
+        protocolo_confirmado_en: new Date().toISOString(),
+      },
+    })
+    .eq('id', procedimientoId)
+
+  revalidatePath('/paciente')
+  revalidatePath('/enfermeria')
+}
+
 // ================================================================
 // MÓDULO ENFERMERÍA
 // ================================================================
