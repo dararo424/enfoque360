@@ -17,6 +17,9 @@ export default async function CapacitacionPage() {
       />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-7">
+          <a href="/enfermeria" className="inline-flex items-center gap-1.5 text-xs text-teal font-medium hover:underline mb-3">
+            ← Volver al dashboard
+          </a>
           <h2 className="text-xl font-bold text-navy">Capacitación EMC</h2>
           <p className="text-sm text-gray-500 mt-0.5">Programa de Educación Médica Continua · Tecnoquímicas</p>
         </div>
