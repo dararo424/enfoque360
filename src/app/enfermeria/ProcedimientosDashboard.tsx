@@ -365,6 +365,10 @@ export function ProcedimientosDashboard({ procedimientos }: { procedimientos: Pr
             <p className="text-xs text-gray-400 mt-0.5">{total} programados</p>
           </div>
           <div className="flex items-center gap-3">
+            <a href="/centro"
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-navy transition-colors">
+              Mi Centro
+            </a>
             <a href="/enfermeria/capacitacion"
               className="flex items-center gap-1.5 text-xs font-medium text-teal hover:text-teal-dark transition-colors">
               <GraduationCap className="w-4 h-4" />

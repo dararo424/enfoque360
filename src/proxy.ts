@@ -17,6 +17,9 @@ const RUTAS_PUBLICAS = ['/login', '/auth/callback', '/auth/signout']
 // Rutas accesibles para admin además de /tq
 const RUTAS_ADMIN_EXTRA = ['/admin']
 
+// Rutas accesibles para enfermera además de /enfermeria
+const RUTAS_ENFERMERA_EXTRA = ['/centro']
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const response = NextResponse.next()
@@ -69,6 +72,11 @@ export async function proxy(request: NextRequest) {
 
     // Admin puede acceder también a /admin además de /tq
     if (rol === 'admin' && RUTAS_ADMIN_EXTRA.some((r) => pathname.startsWith(r))) {
+      return response
+    }
+
+    // Enfermera puede acceder también a /centro
+    if (rol === 'enfermera' && RUTAS_ENFERMERA_EXTRA.some((r) => pathname.startsWith(r))) {
       return response
     }
 

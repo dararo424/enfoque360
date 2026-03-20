@@ -20,7 +20,7 @@ const DEMO: ProcCentro[] = [
 export default async function CentroPage() {
   const usuario = await getUsuario()
   if (!usuario) redirect('/login')
-  if (usuario.rol !== 'usuario_centro' && usuario.rol !== 'admin') redirect('/login')
+  if (!['usuario_centro', 'enfermera', 'admin'].includes(usuario.rol)) redirect('/login')
 
   let procedimientos: ProcCentro[] = DEMO
   const centroId = usuario.centro_id
@@ -67,6 +67,11 @@ export default async function CentroPage() {
       />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-7">
+          {usuario.rol === 'enfermera' && (
+            <a href="/enfermeria" className="inline-flex items-center gap-1.5 text-xs text-teal font-medium hover:underline mb-3">
+              ← Volver a procedimientos
+            </a>
+          )}
           <h2 className="text-xl font-bold text-navy">Dashboard del Centro</h2>
           <p className="text-sm text-gray-500 mt-0.5">{usuario.centros?.nombre ?? 'Centro'}</p>
         </div>
