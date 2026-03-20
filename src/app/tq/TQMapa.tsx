@@ -1,10 +1,10 @@
 'use client'
 
-/**
- * Geographic overview of active centers in Colombia.
- * Colombia outline is hand-drawn (schematic) for a recognizable silhouette.
- * City dots are manually positioned to match the outline shape.
- */
+import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
+
+// Natural Earth world-atlas topojson (countries at 110m resolution)
+// Colombia = numeric ISO 3166-1 id "170"
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
 interface Centro {
   nombre: string
@@ -32,36 +32,17 @@ const CENTROS: Centro[] = [
   { nombre: 'Hospital Regional de Pereira', ciudad: 'Pereira',      regional: 'Eje Cafetero', procedimientos:  29, pctAdecuada: 72, activo: false },
 ]
 
-/**
- * Hand-placed city coordinates inside the SVG outline below.
- * Positions derived from real geography adapted to the schematic shape.
- */
-const CIUDAD_SVG: Record<string, { x: number; y: number; labelDx: number; labelDy: number }> = {
-  Barranquilla: { x:  96, y:  27, labelDx:   0, labelDy: -11 },
-  Cartagena:    { x:  72, y:  38, labelDx: -10, labelDy: -10 },
-  Bucaramanga:  { x: 142, y:  97, labelDx:  11, labelDy:   0 },
-  Cúcuta:       { x: 160, y:  76, labelDx:  11, labelDy:   0 },
-  Medellín:     { x:  76, y: 130, labelDx: -12, labelDy:  -5 },
-  Manizales:    { x:  82, y: 152, labelDx: -14, labelDy:   5 },
-  Pereira:      { x:  73, y: 161, labelDx: -12, labelDy:   5 },
-  Bogotá:       { x: 120, y: 158, labelDx:  11, labelDy:   4 },
-  Cali:         { x:  60, y: 190, labelDx: -11, labelDy:   4 },
+// Real lat/lon coordinates for each city
+const CIUDAD_COORDS: Record<string, [number, number]> = {
+  Barranquilla: [-74.796, 10.964],
+  Bucaramanga:  [-73.126,  7.119],
+  Cúcuta:       [-72.507,  7.893],
+  Medellín:     [-75.574,  6.244],
+  Manizales:    [-75.520,  5.070],
+  Pereira:      [-75.697,  4.814],
+  Bogotá:       [-74.082,  4.710],
+  Cali:         [-76.521,  3.431],
 }
-
-/**
- * Colombia outline — clockwise from northwest (Gulf of Urabá / Pacific).
- * ViewBox: 0 0 260 300
- * This is a schematic silhouette, not a mathematically projected map.
- */
-const COLOMBIA =
-  'M 42 90 L 38 75 L 44 60 L 60 46 L 76 36 ' +        // NW coast → Caribbean
-  'L 97 27 L 116 20 L 138 12 L 157 4 ' +              // Caribbean coast → Guajira tip
-  'L 170 10 L 164 26 L 160 47 L 157 72 ' +            // Venezuela border (N)
-  'L 165 95 L 178 112 L 200 133 L 222 158 ' +         // Venezuela / Llanos
-  'L 228 185 L 222 215 ' +                             // Far east / Orinoco
-  'L 200 248 L 170 263 L 140 270 ' +                  // Brazil / Amazon
-  'L 108 264 L 85 250 L 62 234 ' +                    // Peru border
-  'L 44 210 L 28 182 L 22 155 L 25 125 L 32 105 Z'   // Pacific coast → close
 
 const REGIONAL_COLOR: Record<string, string> = {
   'Centro':       '#0F2D52',
@@ -76,6 +57,18 @@ function pctColor(pct: number) {
   if (pct >= 85) return '#0CA5A0'
   if (pct >= 75) return '#f59e0b'
   return '#ef4444'
+}
+
+// Label nudges to avoid pin overlap
+const LABEL_OFFSET: Record<string, [number, number]> = {
+  Barranquilla: [  0, -14],
+  Bucaramanga:  [ 12,   2],
+  Cúcuta:       [ 12,   2],
+  Medellín:     [-12,  -5],
+  Manizales:    [-12,   5],
+  Pereira:      [-12,   8],
+  Bogotá:       [ 12,   2],
+  Cali:         [-12,   5],
 }
 
 export function TQMapa() {
@@ -108,58 +101,77 @@ export function TQMapa() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* SVG Map */}
+        {/* Map */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-sm font-semibold text-navy mb-1">Distribución geográfica</h3>
-          <p className="text-xs text-gray-400 mb-4">Centros activos · Colombia</p>
+          <p className="text-xs text-gray-400 mb-3">Centros activos · Colombia</p>
 
-          <svg viewBox="0 0 260 300" width="100%" style={{ maxWidth: 300 }} className="block mx-auto">
-            {/* Ocean */}
-            <rect width="260" height="300" fill="#e8f4fb" rx="10" />
+          <div className="rounded-xl overflow-hidden bg-[#e8f4fb]">
+            <ComposableMap
+              projection="geoMercator"
+              projectionConfig={{ center: [-73.5, 4.0], scale: 2400 }}
+              width={400}
+              height={480}
+              style={{ width: '100%', height: 'auto' }}
+            >
+              <Geographies geography={GEO_URL}>
+                {({ geographies }) =>
+                  geographies
+                    .filter((geo) => geo.id === '170') // Colombia only
+                    .map((geo) => (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill="#dde8ed"
+                        stroke="#94a3b8"
+                        strokeWidth={0.6}
+                        style={{ default: { outline: 'none' } }}
+                      />
+                    ))
+                }
+              </Geographies>
 
-            {/* Colombia silhouette */}
-            <path d={COLOMBIA} fill="#dde8ed" stroke="#94a3b8" strokeWidth="1.2" strokeLinejoin="round" />
+              {Object.entries(byCity)
+                .filter(([ciudad, centros]) => CIUDAD_COORDS[ciudad] && centros.some((c) => c.activo))
+                .map(([ciudad, centros]) => {
+                  const coords  = CIUDAD_COORDS[ciudad]
+                  const activos = centros.filter((c) => c.activo)
+                  const color   = REGIONAL_COLOR[activos[0].regional] ?? '#94a3b8'
+                  const r       = 5 + activos.length * 2.5
+                  const [lx, ly] = LABEL_OFFSET[ciudad] ?? [0, -14]
+                  const anchor   = lx > 0 ? 'start' : lx < 0 ? 'end' : 'middle'
 
-            {/* City pins */}
-            {Object.entries(byCity).map(([ciudad, centros]) => {
-              const pos = CIUDAD_SVG[ciudad]
-              if (!pos) return null
-              const activos = centros.filter((c) => c.activo)
-              if (activos.length === 0) return null
-              const regional = activos[0].regional
-              const color    = REGIONAL_COLOR[regional] ?? '#94a3b8'
-              const r        = 5 + activos.length * 2.5
-              const lAnchor  = pos.labelDx > 0 ? 'start' : pos.labelDx < 0 ? 'end' : 'middle'
-
-              return (
-                <g key={ciudad}>
-                  {/* Pulse ring */}
-                  <circle cx={pos.x} cy={pos.y} r={r + 4} fill={color} opacity={0.18} />
-                  {/* Pin */}
-                  <circle cx={pos.x} cy={pos.y} r={r} fill={color} />
-                  {/* Count */}
-                  {activos.length > 1 && (
-                    <text x={pos.x} y={pos.y + 3.5}
-                      textAnchor="middle" fontSize="7.5" fill="white" fontWeight="700">
-                      {activos.length}
-                    </text>
-                  )}
-                  {/* City label */}
-                  <text
-                    x={pos.x + pos.labelDx}
-                    y={pos.y + pos.labelDy}
-                    textAnchor={lAnchor}
-                    fontSize="7.2" fill="#1e293b" fontWeight="500"
-                  >
-                    {ciudad}
-                  </text>
-                </g>
-              )
-            })}
-          </svg>
+                  return (
+                    <Marker key={ciudad} coordinates={coords}>
+                      {/* Pulse ring */}
+                      <circle r={r + 5} fill={color} opacity={0.18} />
+                      {/* Pin */}
+                      <circle r={r} fill={color} stroke="white" strokeWidth={1.2} />
+                      {/* Count badge */}
+                      {activos.length > 1 && (
+                        <text dy={3.5} textAnchor="middle" fontSize={8} fill="white" fontWeight="700">
+                          {activos.length}
+                        </text>
+                      )}
+                      {/* City label */}
+                      <text
+                        dx={lx} dy={ly}
+                        textAnchor={anchor}
+                        fontSize={8}
+                        fill="#1e293b"
+                        fontWeight="600"
+                        style={{ textShadow: '0 0 3px white, 0 0 3px white' }}
+                      >
+                        {ciudad}
+                      </text>
+                    </Marker>
+                  )
+                })}
+            </ComposableMap>
+          </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 justify-center">
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
             {Object.entries(REGIONAL_COLOR).map(([regional, color]) => (
               <div key={regional} className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -175,7 +187,7 @@ export function TQMapa() {
             <h3 className="text-sm font-semibold text-navy">Centros por ciudad</h3>
             <p className="text-xs text-gray-400 mt-0.5">Solo centros activos · ordenados por volumen</p>
           </div>
-          <div className="overflow-y-auto max-h-[360px] divide-y divide-gray-50">
+          <div className="overflow-y-auto max-h-[440px] divide-y divide-gray-50">
             {Object.entries(byCity)
               .filter(([, cs]) => cs.some((c) => c.activo))
               .sort((a, b) =>
