@@ -1,27 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, ChevronRight, ChevronLeft, User, Pill, FileText, ClipboardCheck } from 'lucide-react'
+import { CheckCircle, ChevronRight, ChevronLeft, User, Pill, FileText, ClipboardCheck, AlertCircle } from 'lucide-react'
+import { registrarPreparacionPaciente } from '@/lib/actions'
 
-// ---- Tipos ----
 interface FormData {
-  // Paso 1
   nombre: string
   cedula: string
   edad: string
-  // Paso 2
   producto: string
   horasAyuno: string
   alimentosConsumidos: string
-  // Paso 3
   observaciones: string
   consentimiento: boolean
 }
 
 const PASOS = [
-  { num: 1, label: 'Datos personales',  icon: User },
-  { num: 2, label: 'Preparación',        icon: Pill },
-  { num: 3, label: 'Confirmación',       icon: FileText },
+  { num: 1, label: 'Datos personales', icon: User },
+  { num: 2, label: 'Preparación',      icon: Pill },
+  { num: 3, label: 'Confirmación',     icon: FileText },
 ]
 
 // ---- Barra de progreso ----
@@ -60,13 +57,13 @@ function BarraProgreso({ paso }: { paso: number }) {
   )
 }
 
-// ---- Campos helpers ----
+// ---- Helpers UI ----
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{error}</p>}
     </div>
   )
 }
@@ -99,20 +96,18 @@ function PantallaConfirmacion({ data, id }: { data: FormData; id: string }) {
       <h3 className="text-xl font-bold text-navy mb-1">¡Registro exitoso!</h3>
       <p className="text-sm text-gray-500 mb-6">Tu preparación ha sido registrada correctamente.</p>
 
-      {/* ID de registro */}
       <div className="bg-teal/5 border border-teal/20 rounded-2xl px-6 py-4 mb-6 inline-block min-w-[280px]">
         <p className="text-xs text-teal font-semibold uppercase tracking-wider mb-1">ID de registro</p>
         <p className="text-2xl font-bold text-navy font-mono tracking-widest">{id}</p>
       </div>
 
-      {/* Resumen */}
       <div className="bg-gray-50 rounded-2xl p-5 text-left space-y-3 mb-6">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Resumen</p>
         {[
-          { label: 'Paciente', value: data.nombre },
-          { label: 'Cédula',   value: data.cedula },
-          { label: 'Edad',     value: `${data.edad} años` },
-          { label: 'Producto', value: data.producto },
+          { label: 'Paciente',      value: data.nombre },
+          { label: 'Cédula',        value: data.cedula },
+          { label: 'Edad',          value: `${data.edad} años` },
+          { label: 'Producto',      value: data.producto },
           { label: 'Horas de ayuno', value: `${data.horasAyuno} horas` },
         ].map((row) => (
           <div key={row.label} className="flex items-center justify-between text-sm">
@@ -123,57 +118,62 @@ function PantallaConfirmacion({ data, id }: { data: FormData; id: string }) {
       </div>
 
       <p className="text-xs text-gray-400">
-        Guarda tu ID de registro. El equipo médico lo necesitará el día del procedimiento.
+        Muestra este ID al equipo de enfermería el día del procedimiento.
       </p>
     </div>
   )
 }
 
 // ---- Componente principal ----
-export function FormularioPaciente() {
-  const [paso, setPaso] = useState(1)
+export function FormularioPaciente({ nombreDefault = '', cedulaDefault = '' }: {
+  nombreDefault?: string
+  cedulaDefault?: string
+}) {
+  const [paso, setPaso]       = useState(1)
   const [enviado, setEnviado] = useState(false)
-  const [idRegistro, setIdRegistro] = useState('')
+  const [idRegistro, setId]   = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [errorServer, setErrorServer] = useState<string | null>(null)
   const [errores, setErrores] = useState<Partial<Record<keyof FormData, string>>>({})
 
   const [form, setForm] = useState<FormData>({
-    nombre: '',
-    cedula: '',
-    edad: '',
-    producto: '',
-    horasAyuno: '',
+    nombre:              nombreDefault,
+    cedula:              cedulaDefault,
+    edad:                '',
+    producto:            '',
+    horasAyuno:          '',
     alimentosConsumidos: '',
-    observaciones: '',
-    consentimiento: false,
+    observaciones:       '',
+    consentimiento:      false,
   })
 
   function set<K extends keyof FormData>(k: K, v: FormData[K]) {
     setForm((f) => ({ ...f, [k]: v }))
     setErrores((e) => ({ ...e, [k]: undefined }))
+    setErrorServer(null)
   }
 
-  function validarPaso1(): boolean {
+  function validarPaso1() {
     const e: typeof errores = {}
-    if (!form.nombre.trim())   e.nombre  = 'El nombre es requerido'
-    if (!form.cedula.trim())   e.cedula  = 'La cédula es requerida'
+    if (!form.nombre.trim())  e.nombre = 'El nombre es requerido'
+    if (!form.cedula.trim())  e.cedula = 'La cédula es requerida'
     if (!form.edad || Number(form.edad) < 1 || Number(form.edad) > 120)
-                               e.edad    = 'Ingresa una edad válida'
+                              e.edad   = 'Ingresa una edad válida'
     setErrores(e)
     return Object.keys(e).length === 0
   }
 
-  function validarPaso2(): boolean {
+  function validarPaso2() {
     const e: typeof errores = {}
-    if (!form.producto)        e.producto   = 'Selecciona un producto'
-    if (!form.horasAyuno)      e.horasAyuno = 'Ingresa las horas de ayuno'
+    if (!form.producto)   e.producto   = 'Selecciona un producto'
+    if (!form.horasAyuno) e.horasAyuno = 'Selecciona las horas de ayuno'
     setErrores(e)
     return Object.keys(e).length === 0
   }
 
-  function validarPaso3(): boolean {
+  function validarPaso3() {
     const e: typeof errores = {}
-    if (!form.consentimiento)  e.consentimiento = 'Debes aceptar el consentimiento'
+    if (!form.consentimiento) e.consentimiento = 'Debes aceptar el consentimiento informado'
     setErrores(e)
     return Object.keys(e).length === 0
   }
@@ -184,29 +184,39 @@ export function FormularioPaciente() {
     setPaso((p) => p + 1)
   }
 
-  function anterior() { setPaso((p) => p - 1) }
-
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
     if (!validarPaso3()) return
     setEnviando(true)
-    // En producción: guardar en Supabase
-    await new Promise((r) => setTimeout(r, 800))
-    const id = `ENF-${Date.now().toString(36).toUpperCase().slice(-6)}`
-    setIdRegistro(id)
-    setEnviado(true)
-    setEnviando(false)
+    setErrorServer(null)
+    try {
+      const result = await registrarPreparacionPaciente({
+        nombre:              form.nombre,
+        cedula:              form.cedula,
+        edad:                Number(form.edad),
+        producto:            form.producto,
+        horasAyuno:          form.horasAyuno,
+        alimentosConsumidos: form.alimentosConsumidos,
+        observaciones:       form.observaciones,
+        consentimiento:      form.consentimiento,
+      })
+      setId(result.id)
+      setEnviado(true)
+    } catch (err) {
+      setErrorServer(err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
-  if (enviado) {
-    return <PantallaConfirmacion data={form} id={idRegistro} />
-  }
+  if (enviado) return <PantallaConfirmacion data={form} id={idRegistro} />
 
   return (
     <div>
       <BarraProgreso paso={paso} />
 
       <form onSubmit={enviar} className="space-y-5">
+
         {/* ---- PASO 1: Datos personales ---- */}
         {paso === 1 && (
           <div className="space-y-4">
@@ -243,27 +253,19 @@ export function FormularioPaciente() {
             <Campo label="Producto utilizado para preparación" error={errores.producto}>
               <div className="grid grid-cols-1 gap-2">
                 {[
-                  { value: 'TRAVAD PIK',  desc: 'Solución de pikosulfato' },
+                  { value: 'TRAVAD PIK',  desc: 'Solución de pikosulfato de sodio' },
                   { value: 'COLONLYTELY', desc: 'Polietilenglicol 4L' },
                   { value: 'NULYTELY',    desc: 'Polietilenglicol + electrolitos' },
-                  { value: 'OTRO',        desc: 'Otro producto' },
+                  { value: 'OTRO',        desc: 'Otro producto indicado por el médico' },
                 ].map(({ value, desc }) => (
                   <label
                     key={value}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
-                      form.producto === value
-                        ? 'border-teal bg-teal/5'
-                        : 'border-gray-200 hover:border-gray-300'
+                      form.producto === value ? 'border-teal bg-teal/5' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="producto"
-                      value={value}
-                      checked={form.producto === value}
-                      onChange={() => set('producto', value)}
-                      className="sr-only"
-                    />
+                    <input type="radio" name="producto" value={value} checked={form.producto === value}
+                      onChange={() => set('producto', value)} className="sr-only" />
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
                       form.producto === value ? 'border-teal' : 'border-gray-300'
                     }`}>
@@ -276,22 +278,15 @@ export function FormularioPaciente() {
                   </label>
                 ))}
               </div>
-              {errores.producto && <p className="text-xs text-red-500 mt-1">{errores.producto}</p>}
             </Campo>
 
-            <Campo label="Horas de ayuno" error={errores.horasAyuno}>
-              <div className="flex gap-3">
+            <Campo label="Horas de ayuno completadas" error={errores.horasAyuno}>
+              <div className="flex gap-2 flex-wrap">
                 {['4', '6', '8', '10', '12', '+12'].map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => set('horasAyuno', h)}
-                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
-                      form.horasAyuno === h
-                        ? 'border-teal bg-teal/5 text-teal'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
+                  <button key={h} type="button" onClick={() => set('horasAyuno', h)}
+                    className={`px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                      form.horasAyuno === h ? 'border-teal bg-teal/5 text-teal' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}>
                     {h}h
                   </button>
                 ))}
@@ -299,12 +294,9 @@ export function FormularioPaciente() {
             </Campo>
 
             <Campo label="Alimentos o líquidos consumidos en las últimas 24 horas">
-              <Textarea
-                rows={3}
-                value={form.alimentosConsumidos}
+              <Textarea rows={3} value={form.alimentosConsumidos}
                 onChange={(e) => set('alimentosConsumidos', e.target.value)}
-                placeholder="Ej. Solo líquidos claros desde las 6pm de ayer..."
-              />
+                placeholder="Ej. Solo líquidos claros desde las 6pm de ayer..." />
             </Campo>
           </div>
         )}
@@ -313,33 +305,28 @@ export function FormularioPaciente() {
         {paso === 3 && (
           <div className="space-y-4">
             <Campo label="Observaciones adicionales">
-              <Textarea
-                rows={4}
-                value={form.observaciones}
+              <Textarea rows={3} value={form.observaciones}
                 onChange={(e) => set('observaciones', e.target.value)}
-                placeholder="Síntomas, alergias, medicamentos actuales u otras observaciones relevantes..."
-              />
+                placeholder="Síntomas, alergias, medicamentos o cualquier observación relevante..." />
             </Campo>
 
-            {/* Resumen previo al envío */}
             <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Resumen del registro</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Resumen</p>
               {[
-                { label: 'Paciente', value: form.nombre },
-                { label: 'Cédula',   value: form.cedula },
-                { label: 'Producto', value: form.producto },
-                { label: 'Ayuno',    value: form.horasAyuno ? `${form.horasAyuno} horas` : '—' },
+                { label: 'Paciente',   value: form.nombre },
+                { label: 'Cédula',     value: form.cedula },
+                { label: 'Producto',   value: form.producto },
+                { label: 'Ayuno',      value: form.horasAyuno ? `${form.horasAyuno} horas` : '—' },
               ].map((r) => (
                 <div key={r.label} className="flex justify-between text-sm">
                   <span className="text-gray-500">{r.label}</span>
-                  <span className="font-medium text-gray-800">{r.value}</span>
+                  <span className="font-medium text-gray-800">{r.value || '—'}</span>
                 </div>
               ))}
             </div>
 
-            {/* Consentimiento */}
             <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-              form.consentimiento ? 'border-teal bg-teal/5' : errores.consentimiento ? 'border-red-300 bg-red-50' : 'border-gray-200'
+              form.consentimiento ? 'border-teal bg-teal/5' : errores.consentimiento ? 'border-red-300' : 'border-gray-200'
             }`}>
               <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
                 form.consentimiento ? 'bg-teal border-teal' : 'border-gray-300'
@@ -350,21 +337,27 @@ export function FormularioPaciente() {
                   </svg>
                 )}
               </div>
-              <input
-                type="checkbox"
-                checked={form.consentimiento}
-                onChange={(e) => set('consentimiento', e.target.checked)}
-                className="sr-only"
-              />
+              <input type="checkbox" checked={form.consentimiento}
+                onChange={(e) => set('consentimiento', e.target.checked)} className="sr-only" />
               <div>
                 <p className="text-sm font-medium text-gray-800">Consentimiento informado</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  Confirmo que la información proporcionada es verídica y que he recibido las instrucciones de preparación para la colonoscopia. Autorizo al equipo médico para realizar el procedimiento.
+                  Confirmo que la información proporcionada es verídica y que he seguido las instrucciones
+                  de preparación. Autorizo al equipo médico para realizar el procedimiento de colonoscopia.
                 </p>
               </div>
             </label>
             {errores.consentimiento && (
-              <p className="text-xs text-red-500 -mt-2">{errores.consentimiento}</p>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />{errores.consentimiento}
+              </p>
+            )}
+
+            {errorServer && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                <p className="text-sm text-red-600">{errorServer}</p>
+              </div>
             )}
           </div>
         )}
@@ -372,41 +365,26 @@ export function FormularioPaciente() {
         {/* ---- Navegación ---- */}
         <div className="flex gap-3 pt-2">
           {paso > 1 && (
-            <button
-              type="button"
-              onClick={anterior}
-              className="flex items-center gap-1.5 px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
+            <button type="button" onClick={() => setPaso((p) => p - 1)}
+              className="flex items-center gap-1.5 px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <ChevronLeft className="w-4 h-4" />
               Anterior
             </button>
           )}
 
           {paso < 3 ? (
-            <button
-              type="button"
-              onClick={siguiente}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal text-white rounded-xl text-sm font-semibold hover:bg-teal-dark transition-colors"
-            >
+            <button type="button" onClick={siguiente}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal text-white rounded-xl text-sm font-semibold hover:bg-teal-dark transition-colors">
               Siguiente
               <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
-            <button
-              type="submit"
-              disabled={enviando}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-navy text-white rounded-xl text-sm font-semibold hover:bg-navy-light transition-colors disabled:opacity-60"
-            >
+            <button type="submit" disabled={enviando}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-navy text-white rounded-xl text-sm font-semibold hover:bg-navy-light transition-colors disabled:opacity-60">
               {enviando ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Registrando...
-                </>
+                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Registrando...</>
               ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Confirmar registro
-                </>
+                <><CheckCircle className="w-4 h-4" />Confirmar registro</>
               )}
             </button>
           )}
