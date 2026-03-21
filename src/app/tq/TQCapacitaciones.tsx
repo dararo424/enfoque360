@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { GraduationCap, CheckCircle2, Users, TrendingUp, AlertTriangle, X, Send } from 'lucide-react'
+import { GraduationCap, CheckCircle2, Users, TrendingUp, AlertTriangle, X, Send, Lightbulb } from 'lucide-react'
 
 type ResumenCerts = Record<string, { certificadas: number; vencenEn30: number; vencidas: number }>
 
@@ -359,8 +359,104 @@ export function TQCapacitaciones({ resumenCerts = {} }: { resumenCerts?: Resumen
         </div>
       </div>
 
+      {/* Recomendaciones por brechas */}
+      <BrechasPanel centros={sorted} />
+
       {/* Asignación de módulos */}
       <AsignacionPanel />
+    </div>
+  )
+}
+
+// ---- Detección de brechas y recomendación de módulos ----
+interface Brecha {
+  centro: string
+  ciudad: string
+  tipo: 'certificacion' | 'progreso' | 'inactividad'
+  moduloRecomendado: string
+  detalle: string
+}
+
+function detectarBrechas(centros: CentroCapRow[]): Brecha[] {
+  const brechas: Brecha[] = []
+  for (const c of centros) {
+    const pctCert    = c.certificadas / c.enfermeras
+    const pctModulos = c.modulosCompletos / c.totalModulos
+    const dias       = diasDesde(c.ultimaActividad)
+
+    if (pctCert < 0.6) {
+      brechas.push({
+        centro: c.centro, ciudad: c.ciudad,
+        tipo: 'certificacion',
+        moduloRecomendado: 'Evaluación y certificación final',
+        detalle: `Solo ${Math.round(pctCert * 100)}% certificadas — por debajo del 60% mínimo`,
+      })
+    } else if (pctModulos < 0.5) {
+      brechas.push({
+        centro: c.centro, ciudad: c.ciudad,
+        tipo: 'progreso',
+        moduloRecomendado: 'Preparación intestinal: fundamentos',
+        detalle: `${Math.round(pctModulos * 100)}% de módulos completados — avance insuficiente`,
+      })
+    } else if (dias > 30) {
+      brechas.push({
+        centro: c.centro, ciudad: c.ciudad,
+        tipo: 'inactividad',
+        moduloRecomendado: 'Técnica de administración del producto',
+        detalle: `Sin actividad hace ${dias} días — riesgo de desactualización`,
+      })
+    }
+  }
+  return brechas
+}
+
+const BRECHA_CFG = {
+  certificacion: { label: 'Certificación baja',  color: 'bg-red-50 border-red-200 text-red-700',    dot: 'bg-red-400'    },
+  progreso:      { label: 'Progreso bajo',        color: 'bg-orange-50 border-orange-200 text-orange-700', dot: 'bg-orange-400' },
+  inactividad:   { label: 'Inactividad',          color: 'bg-yellow-50 border-yellow-200 text-yellow-700', dot: 'bg-yellow-400' },
+}
+
+function BrechasPanel({ centros }: { centros: CentroCapRow[] }) {
+  const brechas = useMemo(() => detectarBrechas(centros), [centros])
+  if (brechas.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+        <Lightbulb className="w-4 h-4 text-amber-500" />
+        <div>
+          <h3 className="text-sm font-semibold text-navy">Recomendaciones adaptadas por brecha</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Módulos sugeridos según el estado real de cada centro
+          </p>
+        </div>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {brechas.map((b, i) => {
+          const cfg = BRECHA_CFG[b.tipo]
+          return (
+            <div key={i} className="px-6 py-4 flex items-start gap-4">
+              <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                  <span className="text-sm font-semibold text-gray-800">{b.centro}</span>
+                  <span className="text-xs text-gray-400">{b.ciudad}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.color}`}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-1.5">{b.detalle}</p>
+                <div className="inline-flex items-center gap-1.5 bg-teal/5 border border-teal/20 rounded-lg px-3 py-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-teal flex-shrink-0" />
+                  <span className="text-xs font-medium text-teal">
+                    Módulo recomendado: {b.moduloRecomendado}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

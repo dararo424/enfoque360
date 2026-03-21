@@ -16,6 +16,7 @@ export async function registrarPreparacionPaciente(data: {
   nombre: string
   cedula: string
   edad: number
+  telefono?: string
   producto: string
   horasAyuno: string
   alimentosConsumidos: string
@@ -36,7 +37,7 @@ export async function registrarPreparacionPaciente(data: {
     usuarioId = u?.id ?? null
   }
 
-  const preparacion = {
+  const preparacion: Record<string, unknown> = {
     producto:             data.producto,
     horas_ayuno:          data.horasAyuno,
     alimentos_consumidos: data.alimentosConsumidos,
@@ -44,6 +45,7 @@ export async function registrarPreparacionPaciente(data: {
     consentimiento:       data.consentimiento,
     registrado_en:        new Date().toISOString(),
   }
+  if (data.telefono) preparacion.telefono = data.telefono
 
   // Upsert por cédula
   const { data: paciente, error } = await supabase

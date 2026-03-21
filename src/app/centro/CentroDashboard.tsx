@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Download, Calendar } from 'lucide-react'
+import { Download, Calendar, User } from 'lucide-react'
 import { TendenciaCentroChart, ProductoCentroChart, MedicoBarChart } from './CentroCharts'
 import type { TendenciaPoint, ProductoPoint, MedicoBarPoint } from './CentroCharts'
 import { exportarCSV } from '@/lib/export'
@@ -30,16 +30,25 @@ const PERIODOS = [
 ]
 
 export function CentroDashboard({ procedimientos, nombreCentro }: Props) {
-  const [periodo, setPeriodo] = useState(3)
+  const [periodo, setPeriodo]   = useState(3)
+  const [medico,  setMedico]    = useState<string>('todos')
+
+  // Lista de médicos únicos en los datos
+  const medicos = useMemo(() => {
+    const set = new Set(procedimientos.map((p) => p.medico).filter(Boolean))
+    return Array.from(set).sort()
+  }, [procedimientos])
 
   const filtered = useMemo(() => {
     const cutoff = new Date()
     cutoff.setMonth(cutoff.getMonth() - periodo)
     return procedimientos.filter((p) => {
       const d = new Date(p.fecha)
-      return !isNaN(d.getTime()) ? d >= cutoff : true
+      const enPeriodo = !isNaN(d.getTime()) ? d >= cutoff : true
+      const esMedico  = medico === 'todos' || p.medico === medico
+      return enPeriodo && esMedico
     })
-  }, [procedimientos, periodo])
+  }, [procedimientos, periodo, medico])
 
   const completados = filtered.filter((p) => p.estado === 'completado')
   const adecuados   = completados.filter((p) => ['excelente', 'buena', 'regular'].includes(p.prep))
@@ -104,7 +113,7 @@ export function CentroDashboard({ procedimientos, nombreCentro }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Período */}
+      {/* Filtros */}
       <div className="flex items-center gap-2 flex-wrap">
         <Calendar className="w-4 h-4 text-gray-400" />
         {PERIODOS.map((p) => (
@@ -115,6 +124,21 @@ export function CentroDashboard({ procedimientos, nombreCentro }: Props) {
             {p.label}
           </button>
         ))}
+
+        {medicos.length > 0 && (
+          <div className="flex items-center gap-1.5 ml-2">
+            <User className="w-3.5 h-3.5 text-gray-400" />
+            <select
+              value={medico}
+              onChange={(e) => setMedico(e.target.value)}
+              className="text-xs border border-gray-200 rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal/30 bg-white text-gray-600"
+            >
+              <option value="todos">Todos los médicos</option>
+              {medicos.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        )}
+
         <button onClick={descargar}
           className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-navy border border-navy/20 hover:bg-navy/5 transition-colors px-3 py-1.5 rounded-full">
           <Download className="w-3.5 h-3.5" />

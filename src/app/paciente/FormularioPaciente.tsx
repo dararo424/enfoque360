@@ -8,6 +8,7 @@ interface FormData {
   nombre: string
   cedula: string
   edad: string
+  telefono: string
   producto: string
   horasAyuno: string
   alimentosConsumidos: string
@@ -140,6 +141,7 @@ export function FormularioPaciente({ nombreDefault = '', cedulaDefault = '' }: {
     nombre:              nombreDefault,
     cedula:              cedulaDefault,
     edad:                '',
+    telefono:            '',
     producto:            '',
     horasAyuno:          '',
     alimentosConsumidos: '',
@@ -194,6 +196,7 @@ export function FormularioPaciente({ nombreDefault = '', cedulaDefault = '' }: {
         nombre:              form.nombre,
         cedula:              form.cedula,
         edad:                Number(form.edad),
+        telefono:            form.telefono || undefined,
         producto:            form.producto,
         horasAyuno:          form.horasAyuno,
         alimentosConsumidos: form.alimentosConsumidos,
@@ -244,6 +247,19 @@ export function FormularioPaciente({ nombreDefault = '', cedulaDefault = '' }: {
                 />
               </Campo>
             </div>
+            <Campo label="WhatsApp (opcional)">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 select-none">+57</span>
+                <Input
+                  type="tel"
+                  value={form.telefono}
+                  onChange={(e) => set('telefono', e.target.value)}
+                  placeholder="300 123 4567"
+                  className="pl-12"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Para enviarte recordatorios antes de tu procedimiento</p>
+            </Campo>
           </div>
         )}
 
