@@ -10,7 +10,7 @@ const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
 // Default view centered on Colombia
 const DEFAULT_CENTER: [number, number] = [-73.5, 4.5]
-const DEFAULT_ZOOM = 1
+const DEFAULT_ZOOM = 0.8
 
 interface Centro {
   nombre: string
@@ -131,7 +131,7 @@ export function TQMapa() {
                 <Plus className="w-3.5 h-3.5 text-gray-600" />
               </button>
               <button
-                onClick={() => setZoom((z) => Math.max(z / 1.5, 1))}
+                onClick={() => setZoom((z) => Math.max(z / 1.5, 0.5))}
                 className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                 title="Alejar"
               >
@@ -162,7 +162,7 @@ export function TQMapa() {
                   setZoom(z)
                   setCenter(coordinates as [number, number])
                 }}
-                minZoom={1}
+                minZoom={0.5}
                 maxZoom={8}
               >
                 <Geographies geography={GEO_URL}>
