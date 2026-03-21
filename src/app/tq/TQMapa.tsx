@@ -1,10 +1,16 @@
 'use client'
 
-import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
+import { useState } from 'react'
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps'
+import { Plus, Minus, RotateCcw } from 'lucide-react'
 
 // Natural Earth world-atlas topojson (countries at 110m resolution)
 // Colombia = numeric ISO 3166-1 id "170"
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+
+// Default view centered on Colombia
+const DEFAULT_CENTER: [number, number] = [-73.5, 4.5]
+const DEFAULT_ZOOM = 1
 
 interface Centro {
   nombre: string
@@ -72,6 +78,9 @@ const LABEL_OFFSET: Record<string, [number, number]> = {
 }
 
 export function TQMapa() {
+  const [zoom, setZoom]     = useState(DEFAULT_ZOOM)
+  const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER)
+
   const byCity = CENTROS.reduce<Record<string, Centro[]>>((acc, c) => {
     if (!acc[c.ciudad]) acc[c.ciudad] = []
     acc[c.ciudad].push(c)
@@ -81,6 +90,10 @@ export function TQMapa() {
   const totalActivos  = CENTROS.filter((c) =>  c.activo).length
   const totalProcs    = CENTROS.filter((c) =>  c.activo).reduce((s, c) => s + c.procedimientos, 0)
   const ciudadesCount = [...new Set(CENTROS.filter((c) => c.activo).map((c) => c.ciudad))].length
+
+  // Pin/label sizes shrink as zoom increases so they don't overwhelm the map
+  const pinScale   = 1 / zoom
+  const labelScale = Math.max(0.5, 1 / zoom)
 
   return (
     <div className="space-y-6">
@@ -103,10 +116,38 @@ export function TQMapa() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Map */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-1">Distribución geográfica</h3>
-          <p className="text-xs text-gray-400 mb-3">Centros activos · Colombia</p>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-navy">Distribución geográfica</h3>
+              <p className="text-xs text-gray-400">Centros activos · Colombia · arrastra para mover</p>
+            </div>
+            {/* Zoom controls */}
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => setZoom((z) => Math.min(z * 1.5, 8))}
+                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Acercar"
+              >
+                <Plus className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <button
+                onClick={() => setZoom((z) => Math.max(z / 1.5, 1))}
+                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Alejar"
+              >
+                <Minus className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <button
+                onClick={() => { setZoom(DEFAULT_ZOOM); setCenter(DEFAULT_CENTER) }}
+                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Restablecer vista"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+            </div>
+          </div>
 
-          <div className="rounded-xl overflow-hidden bg-[#e8f4fb]">
+          <div className="rounded-xl overflow-hidden bg-[#e8f4fb] cursor-grab active:cursor-grabbing">
             <ComposableMap
               projection="geoMercator"
               projectionConfig={{ center: [-73.5, 4.0], scale: 2400 }}
@@ -114,59 +155,70 @@ export function TQMapa() {
               height={480}
               style={{ width: '100%', height: 'auto' }}
             >
-              <Geographies geography={GEO_URL}>
-                {({ geographies }) =>
-                  geographies
-                    .filter((geo) => geo.id === '170') // Colombia only
-                    .map((geo) => (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        fill="#dde8ed"
-                        stroke="#94a3b8"
-                        strokeWidth={0.6}
-                        style={{ default: { outline: 'none' } }}
-                      />
-                    ))
-                }
-              </Geographies>
+              <ZoomableGroup
+                zoom={zoom}
+                center={center}
+                onMoveEnd={({ zoom: z, coordinates }) => {
+                  setZoom(z)
+                  setCenter(coordinates as [number, number])
+                }}
+                minZoom={1}
+                maxZoom={8}
+              >
+                <Geographies geography={GEO_URL}>
+                  {({ geographies }) =>
+                    geographies
+                      .filter((geo) => geo.id === '170') // Colombia only
+                      .map((geo) => (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill="#dde8ed"
+                          stroke="#94a3b8"
+                          strokeWidth={0.6}
+                          style={{ default: { outline: 'none' } }}
+                        />
+                      ))
+                  }
+                </Geographies>
 
-              {Object.entries(byCity)
-                .filter(([ciudad, centros]) => CIUDAD_COORDS[ciudad] && centros.some((c) => c.activo))
-                .map(([ciudad, centros]) => {
-                  const coords  = CIUDAD_COORDS[ciudad]
-                  const activos = centros.filter((c) => c.activo)
-                  const color   = REGIONAL_COLOR[activos[0].regional] ?? '#94a3b8'
-                  const r       = 5 + activos.length * 2.5
-                  const [lx, ly] = LABEL_OFFSET[ciudad] ?? [0, -14]
-                  const anchor   = lx > 0 ? 'start' : lx < 0 ? 'end' : 'middle'
+                {Object.entries(byCity)
+                  .filter(([ciudad, centros]) => CIUDAD_COORDS[ciudad] && centros.some((c) => c.activo))
+                  .map(([ciudad, centros]) => {
+                    const coords  = CIUDAD_COORDS[ciudad]
+                    const activos = centros.filter((c) => c.activo)
+                    const color   = REGIONAL_COLOR[activos[0].regional] ?? '#94a3b8'
+                    const r       = (5 + activos.length * 2.5) * pinScale
+                    const [lx, ly] = LABEL_OFFSET[ciudad] ?? [0, -14]
+                    const anchor   = lx > 0 ? 'start' : lx < 0 ? 'end' : 'middle'
 
-                  return (
-                    <Marker key={ciudad} coordinates={coords}>
-                      {/* Pulse ring */}
-                      <circle r={r + 5} fill={color} opacity={0.18} />
-                      {/* Pin */}
-                      <circle r={r} fill={color} stroke="white" strokeWidth={1.2} />
-                      {/* Count badge */}
-                      {activos.length > 1 && (
-                        <text dy={3.5} textAnchor="middle" fontSize={8} fill="white" fontWeight="700">
-                          {activos.length}
+                    return (
+                      <Marker key={ciudad} coordinates={coords}>
+                        {/* Pulse ring */}
+                        <circle r={r + 5 * pinScale} fill={color} opacity={0.18} />
+                        {/* Pin */}
+                        <circle r={r} fill={color} stroke="white" strokeWidth={1.2 * pinScale} />
+                        {/* Count badge */}
+                        {activos.length > 1 && (
+                          <text dy={3.5 * pinScale} textAnchor="middle" fontSize={8 * pinScale} fill="white" fontWeight="700">
+                            {activos.length}
+                          </text>
+                        )}
+                        {/* City label */}
+                        <text
+                          dx={lx * labelScale} dy={ly * labelScale}
+                          textAnchor={anchor}
+                          fontSize={8 * labelScale}
+                          fill="#1e293b"
+                          fontWeight="600"
+                          style={{ textShadow: '0 0 3px white, 0 0 3px white' }}
+                        >
+                          {ciudad}
                         </text>
-                      )}
-                      {/* City label */}
-                      <text
-                        dx={lx} dy={ly}
-                        textAnchor={anchor}
-                        fontSize={8}
-                        fill="#1e293b"
-                        fontWeight="600"
-                        style={{ textShadow: '0 0 3px white, 0 0 3px white' }}
-                      >
-                        {ciudad}
-                      </text>
-                    </Marker>
-                  )
-                })}
+                      </Marker>
+                    )
+                  })}
+              </ZoomableGroup>
             </ComposableMap>
           </div>
 
