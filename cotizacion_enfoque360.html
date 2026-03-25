@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cotización — Proyecto Enfoque 360 · Tecnoquímicas</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      background: #0F2D52;
+      padding: 40px 48px 36px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; right: -30px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(12,165,160,0.15);
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .logo-area h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .logo-area p {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+    }
+    .doc-meta {
+      text-align: right;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.8;
+    }
+    .doc-meta strong {
+      color: white;
+      font-size: 13px;
+    }
+    .header-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .summary-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .summary-card .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 4px;
+    }
+    .summary-card .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0CA5A0;
+    }
+    .summary-card .sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+
+    /* ---- BODY ---- */
+    .body {
+      padding: 40px 48px;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0CA5A0;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    /* ---- PARTIES ---- */
+    .parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .party-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .party-card .role {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+    .party-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F2D52;
+      margin-bottom: 6px;
+    }
+    .party-card p {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    /* ---- PHASE TABLE ---- */
+    .phase-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .phase-table thead tr {
+      background: #f1f5f9;
+    }
+    .phase-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #64748b;
+    }
+    .phase-table th:last-child, .phase-table td:last-child {
+      text-align: right;
+    }
+    .phase-table td {
+      padding: 16px 16px;
+      vertical-align: top;
+      border-top: 1px solid #f1f5f9;
+    }
+    .phase-table tbody tr:hover {
+      background: #fafbfc;
+    }
+    .phase-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-bottom: 4px;
+    }
+    .phase-0 { background: #f1f5f9; color: #475569; }
+    .phase-1 { background: #e0f2fe; color: #0369a1; }
+    .phase-2 { background: #dcfce7; color: #15803d; }
+    .phase-3 { background: #fef3c7; color: #b45309; }
+    .phase-4 { background: #ede9fe; color: #7c3aed; }
+
+    .phase-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F2D52;
+      margin-bottom: 2px;
+    }
+    .phase-desc {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .deliverables {
+      margin-top: 6px;
+    }
+    .deliverables li {
+      font-size: 11px;
+      color: #475569;
+      margin-left: 14px;
+      list-style: disc;
+      line-height: 1.7;
+    }
+
+    .pct-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .bar-track {
+      flex: 1;
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      max-width: 60px;
+    }
+    .bar-fill {
+      height: 4px;
+      border-radius: 2px;
+      background: #0CA5A0;
+    }
+    .pct-label {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .price {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0F2D52;
+      white-space: nowrap;
+    }
+
+    /* Total row */
+    .total-row td {
+      background: #0F2D52;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      border-top: 2px solid #0F2D52 !important;
+    }
+    .total-row td .price {
+      color: #0CA5A0;
+      font-size: 16px;
+    }
+
+    /* ---- SUPPORT ---- */
+    .support-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .support-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px 24px;
+      position: relative;
+    }
+    .support-card.recommended {
+      border-color: #0CA5A0;
+      background: #f0fdfc;
+    }
+    .recommended-badge {
+      position: absolute;
+      top: -10px;
+      right: 16px;
+      background: #0CA5A0;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .support-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F2D52;
+      margin-bottom: 2px;
+    }
+    .support-card .price-big {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0CA5A0;
+      margin: 8px 0 4px;
+    }
+    .support-card .price-big span {
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+    }
+    .support-card .saving {
+      font-size: 11px;
+      color: #15803d;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .support-card ul {
+      margin-left: 16px;
+    }
+    .support-card ul li {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.8;
+      list-style: disc;
+    }
+
+    /* ---- CONDITIONS ---- */
+    .conditions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .condition-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .condition-item h4 {
+      font-size: 11px;
+      font-weight: 700;
+      color: #0F2D52;
+      margin-bottom: 4px;
+    }
+    .condition-item p {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* ---- PAYMENT ---- */
+    .payment-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .payment-table th, .payment-table td {
+      padding: 10px 14px;
+      font-size: 12px;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .payment-table th {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      background: #f8fafc;
+    }
+    .payment-table td:last-child {
+      text-align: right;
+      font-weight: 700;
+      color: #0F2D52;
+    }
+    .milestone-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #0CA5A0;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* ---- FOOTER ---- */
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .footer strong {
+      color: #0F2D52;
+    }
+
+    .validity-note {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: #92400e;
+      margin-top: 24px;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; margin: 0; border-radius: 0; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo-area">
+        <h1>Enfoque 360</h1>
+        <p>Plataforma de colonoscopia · Tecnoquímicas</p>
+      </div>
+      <div class="doc-meta">
+        <strong>Cotización COT-2026-001</strong><br/>
+        Bogotá, 24 de marzo de 2026<br/>
+        Válida por 30 días
+      </div>
+    </div>
+    <div class="header-summary">
+      <div class="summary-card">
+        <div class="label">Total del proyecto</div>
+        <div class="value">$25.000.000</div>
+        <div class="sub">COP · Sin IVA · Sin soporte</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Fases de desarrollo</div>
+        <div class="value">5 fases</div>
+        <div class="sub">Fase 0 (diseño) + 4 de desarrollo</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Roles cubiertos</div>
+        <div class="value">5 roles</div>
+        <div class="sub">Paciente · Enfermera · Centro · Médico · TQ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- PARTES -->
+    <div class="parties">
+      <div class="party-card">
+        <div class="role">Cliente</div>
+        <h3>Tecnoquímicas S.A.</h3>
+        <p>
+          Empresa farmacéutica colombiana.<br/>
+          Área solicitante: Gerencia de Marketing / Unidad Gastro<br/>
+          Proyecto: Enfoque 360 — Plataforma de colonoscopia
+        </p>
+      </div>
+      <div class="party-card">
+        <div class="role">Proveedor de desarrollo</div>
+        <h3>___________________</h3>
+        <p>
+          Nombre / razón social del proveedor<br/>
+          NIT: ___________________<br/>
+          Contacto: ___________________
+        </p>
+      </div>
+    </div>
+
+    <!-- DESCRIPCION -->
+    <div class="section">
+      <div class="section-title">Descripción del proyecto</div>
+      <p style="font-size:13px; color:#475569; line-height:1.7;">
+        Desarrollo de una plataforma web modular que convierte el proceso de colonoscopia en
+        una fuente estructurada de información, generando valor para el paciente, enfermería,
+        institución, médico y Tecnoquímicas. La construcción sigue un enfoque progresivo tipo MVP,
+        priorizando la captura confiable de datos en fases tempranas y añadiendo análisis y
+        automatización en fases posteriores.
+      </p>
+      <p style="font-size:12px; color:#94a3b8; margin-top:8px;">
+        Stack tecnológico: Next.js 16 · React 19 · TypeScript · Supabase (PostgreSQL + Auth) ·
+        Tailwind CSS · Vercel · WhatsApp Business API (Meta Cloud)
+      </p>
+    </div>
+
+    <!-- DESGLOSE POR FASES -->
+    <div class="section">
+      <div class="section-title">Desglose por fases</div>
+      <table class="phase-table">
+        <thead>
+          <tr>
+            <th style="width:42%">Fase / Módulo</th>
+            <th style="width:20%">Entregables principales</th>
+            <th style="width:10%; text-align:center">Peso</th>
+            <th style="width:14%">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- FASE 0 -->
+          <tr>
+            <td>
+              <div class="phase-badge phase-0">Fase 0</div>
+              <div class="phase-name">Análisis y diseño</div>
+              <div class="phase-desc">
+                Levantamiento de requerimientos, arquitectura técnica, diseño de base de datos,
+                flujo de usuarios por rol y prototipos UI/UX (Figma) aprobados por el cliente.
+              </div>
+            </td>
+            <td>
+              <ul class="deliverables">
+                <li>Documento funcional</li>
+                <li>Arquitectura + BD</li>
+                <li>Prototipos Figma</li>
+                <li>Plan de sprints</li>
+              </ul>
+            </td>
+            <td style="text-align:center">
+              <div class="pct-bar" style="justify-content:center">
+                <div class="bar-track"><div class="bar-fill" style="width:40%"></div></div>
+                <span class="pct-label">10%</span>
+              </div>
+            </td>
+            <td><span class="price">$2.500.000</span></td>
+          </tr>
+
+          <!-- FASE 1 -->
+          <tr>
+            <td>
+              <div class="phase-badge phase-1">Fase 1</div>
+              <div class="phase-name">Paciente + Enfermería</div>
+              <div class="phase-desc">
+                Módulo de registro de preparación del paciente (web + WhatsApp), recordatorios
+                automáticos, pre-cita con cuenta regresiva. Módulo de enfermería con listado de
+                procedimientos, registro de indicadores clínicos, iniciar/finalizar procedimiento
+                y visualización de preparación del paciente.
+              </div>
+            </td>
+            <td>
+              <ul class="deliverables">
+                <li>Formulario paciente</li>
+                <li>Chatbot WhatsApp</li>
+                <li>Recordatorios cron</li>
+                <li>Dashboard enfermería</li>
+                <li>Registro indicadores</li>
+                <li>Auth por roles</li>
+              </ul>
+            </td>
+            <td style="text-align:center">
+              <div class="pct-bar" style="justify-content:center">
+                <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+                <span class="pct-label">32%</span>
+              </div>
+            </td>
+            <td><span class="price">$8.000.000</span></td>
+          </tr>
+
+          <!-- FASE 2 -->
+          <tr>
+            <td>
+              <div class="phase-badge phase-2">Fase 2</div>
+              <div class="phase-name">Capacitaciones enfermería</div>
+              <div class="phase-desc">
+                Vista TQ: dashboard de centros, progreso por centro, asignación de módulos y
+                recomendaciones por brechas detectadas. Vista enfermería: módulos formativos
+                (video, lectura, evaluación), progreso, certificaciones y alertas de vencimiento.
+              </div>
+            </td>
+            <td>
+              <ul class="deliverables">
+                <li>Dashboard TQ caps.</li>
+                <li>Motor progreso/cert.</li>
+                <li>Módulos formativos</li>
+                <li>Evaluaciones + cert.</li>
+                <li>Alertas vencimiento</li>
+                <li>Recomendaciones IA</li>
+              </ul>
+            </td>
+            <td style="text-align:center">
+              <div class="pct-bar" style="justify-content:center">
+                <div class="bar-track"><div class="bar-fill" style="width:88%"></div></div>
+                <span class="pct-label">22%</span>
+              </div>
+            </td>
+            <td><span class="price">$5.500.000</span></td>
+          </tr>
+
+          <!-- FASE 3 -->
+          <tr>
+            <td>
+              <div class="phase-badge phase-3">Fase 3</div>
+              <div class="phase-name">Vista centro y médico</div>
+              <div class="phase-desc">
+                Dashboard operativo para el centro con KPIs, tendencia, distribución de productos,
+                colonoscopias por médico, filtros por período y médico, exportación CSV.
+                Dashboard del médico con indicadores clínicos personales, tasa de adenomas,
+                distribución horaria y exportación PDF/CSV.
+              </div>
+            </td>
+            <td>
+              <ul class="deliverables">
+                <li>Dashboard centro</li>
+                <li>Dashboard médico</li>
+                <li>Filtros período / médico</li>
+                <li>Exportación PDF + CSV</li>
+                <li>Gráficas tendencia</li>
+              </ul>
+            </td>
+            <td style="text-align:center">
+              <div class="pct-bar" style="justify-content:center">
+                <div class="bar-track"><div class="bar-fill" style="width:80%"></div></div>
+                <span class="pct-label">20%</span>
+              </div>
+            </td>
+            <td><span class="price">$5.000.000</span></td>
+          </tr>
+
+          <!-- FASE 4 -->
+          <tr>
+            <td>
+              <div class="phase-badge phase-4">Fase 4</div>
+              <div class="phase-name">Visual TQ (vista estratégica)</div>
+              <div class="phase-desc">
+                Dashboard TQ completo: Performance, Análisis (constructor tipo tabla dinámica),
+                Novedades con gestión de alertas y SLA, Inversión EMC con mezcla de productos,
+                Mapa de cobertura interactivo con zoom/pan, Capacitaciones TQ integradas.
+              </div>
+            </td>
+            <td>
+              <ul class="deliverables">
+                <li>6 módulos TQ</li>
+                <li>Tabla dinámica análisis</li>
+                <li>Mapa interactivo</li>
+                <li>Novedades + SLA</li>
+                <li>Inversión EMC</li>
+                <li>Exportaciones</li>
+              </ul>
+            </td>
+            <td style="text-align:center">
+              <div class="pct-bar" style="justify-content:center">
+                <div class="bar-track"><div class="bar-fill" style="width:64%"></div></div>
+                <span class="pct-label">16%</span>
+              </div>
+            </td>
+            <td><span class="price">$4.000.000</span></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="total-row">
+            <td colspan="2" style="color:white; font-size:13px;">
+              Total proyecto (sin soporte) — IVA no incluido
+            </td>
+            <td style="text-align:center; color:rgba(255,255,255,0.5); font-size:11px;">100%</td>
+            <td><span class="price">$25.000.000</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SOPORTE -->
+    <div class="section">
+      <div class="section-title">Planes de soporte post-entrega</div>
+      <p style="font-size:12px; color:#64748b; margin-bottom:16px;">
+        El soporte cubre corrección de errores, actualizaciones de dependencias, monitoreo
+        de Vercel y Supabase, ajustes menores de contenido y atención a incidentes.
+        No incluye desarrollo de nuevas funcionalidades (se cotizan aparte).
+      </p>
+      <div class="support-grid">
+
+        <div class="support-card">
+          <h3>Soporte mensual</h3>
+          <div class="price-big">$700.000 <span>/ mes</span></div>
+          <div class="saving" style="color:#64748b;">Pago mes a mes · Sin permanencia</div>
+          <ul>
+            <li>Corrección de bugs críticos (SLA 24h)</li>
+            <li>Actualizaciones de seguridad</li>
+            <li>Monitoreo hosting (Vercel + Supabase)</li>
+            <li>Hasta 3 ajustes menores de UI/contenido</li>
+            <li>Reporte mensual de uso y estado</li>
+            <li>Soporte por WhatsApp/correo</li>
+          </ul>
+        </div>
+
+        <div class="support-card recommended">
+          <div class="recommended-badge">Recomendado</div>
+          <h3>Soporte anual</h3>
+          <div class="price-big">$6.720.000 <span>/ año</span></div>
+          <div class="saving">Ahorro de $1.680.000 vs mensual (20% dcto.)</div>
+          <ul>
+            <li>Todo lo del plan mensual</li>
+            <li>Bugs críticos: SLA 8h hábiles</li>
+            <li>Hasta 8 ajustes menores al mes</li>
+            <li>1 mejora funcional pequeña por trimestre</li>
+            <li>Revisión trimestral de performance DB</li>
+            <li>Capacitación a nuevos usuarios del equipo TQ</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PLAN DE PAGOS -->
+    <div class="section">
+      <div class="section-title">Plan de pagos sugerido</div>
+      <table class="payment-table">
+        <thead>
+          <tr>
+            <th>Hito</th>
+            <th>Momento del pago</th>
+            <th>%</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="milestone-dot"></span>Anticipo + inicio Fase 0</td>
+            <td>Al firmar contrato</td>
+            <td>30%</td>
+            <td>$7.500.000</td>
+          </tr>
+          <tr>
+            <td><span class="milestone-dot"></span>Entrega y aprobación Fase 1</td>
+            <td>Al aprobar módulo paciente + enfermería</td>
+            <td>30%</td>
+            <td>$7.500.000</td>
+          </tr>
+          <tr>
+            <td><span class="milestone-dot"></span>Entrega y aprobación Fase 2 y 3</td>
+            <td>Al aprobar capacitaciones + centros/médicos</td>
+            <td>25%</td>
+            <td>$6.250.000</td>
+          </tr>
+          <tr>
+            <td><span class="milestone-dot"></span>Entrega final y puesta en producción</td>
+            <td>Al aprobar Fase 4 y deploy definitivo</td>
+            <td>15%</td>
+            <td>$3.750.000</td>
+          </tr>
+          <tr style="background:#f8fafc; font-weight:700; color:#0F2D52;">
+            <td colspan="2">Total</td>
+            <td>100%</td>
+            <td style="color:#0CA5A0; font-weight:800;">$25.000.000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CONDICIONES -->
+    <div class="section">
+      <div class="section-title">Condiciones generales</div>
+      <div class="conditions-grid">
+        <div class="condition-item">
+          <h4>Cambios de alcance</h4>
+          <p>Cambios que impliquen nuevas funcionalidades se cotizan como adiciones.
+          Ajustes sobre lo definido en Fase 0 se atienden sin costo adicional.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Garantía post-entrega</h4>
+          <p>30 días de garantía por bugs derivados del desarrollo, sin costo.
+          No aplica para cambios de requerimientos ni errores de datos del cliente.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Tiempos estimados</h4>
+          <p>Fase 0: 2 semanas · Fase 1: 4–5 semanas · Fases 2 y 3: 4 semanas c/u ·
+          Fase 4: 3 semanas. Total estimado: ~4 meses con dedicación completa.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Capacitación</h4>
+          <p>Sesión de entrega y capacitación a usuarios administradores incluida en cada
+          fase. Máx. 2 sesiones de 1 hora por fase.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Propiedad del código</h4>
+          <p>El código fuente es propiedad del cliente una vez completado el pago total.
+          Se entrega repositorio GitHub con documentación técnica básica.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Infraestructura</h4>
+          <p>Hosting (Vercel) y base de datos (Supabase) son servicios de terceros a
+          cargo del cliente. Costo estimado: USD $25–50 / mes según volumen.</p>
+        </div>
+        <div class="condition-item">
+          <h4>IVA</h4>
+          <p>Los valores expresados no incluyen IVA. De aplicar, se adicionará el 19%
+          sobre los servicios de desarrollo según normativa tributaria vigente.</p>
+        </div>
+        <div class="condition-item">
+          <h4>Pilotos entre fases</h4>
+          <p>Se contempla una prueba piloto con usuarios reales al final de Fase 1 y
+          al final de Fase 3, coordinada con el equipo de Tecnoquímicas.</p>
+        </div>
+      </div>
+
+      <div class="validity-note">
+        ⚠️ <strong>Vigencia de la cotización:</strong> Esta propuesta es válida por
+        <strong>30 días calendario</strong> a partir de la fecha de emisión (24 de marzo de 2026).
+        Pasado este plazo, los valores pueden ser revisados de acuerdo a las condiciones del mercado.
+      </div>
+    </div>
+
+    <!-- FIRMA -->
+    <div class="section" style="margin-bottom: 0;">
+      <div class="section-title">Aprobación</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:16px;">
+        <div>
+          <div style="border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:8px; min-height:40px;"></div>
+          <p style="font-size:11px; color:#64748b;">Firma y sello — Tecnoquímicas S.A.</p>
+          <p style="font-size:11px; color:#94a3b8; margin-top:2px;">Nombre: _____________________  Cargo: _____________________</p>
+        </div>
+        <div>
+          <div style="border-bottom:1px solid #e2e8f0; padding-bottom:8px; margin-bottom:8px; min-height:40px;"></div>
+          <p style="font-size:11px; color:#64748b;">Firma — Proveedor de desarrollo</p>
+          <p style="font-size:11px; color:#94a3b8; margin-top:2px;">Nombre: _____________________  Cargo: _____________________</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>
+      <strong>Enfoque 360 · Tecnoquímicas</strong> — Cotización COT-2026-001
+    </div>
+    <div>
+      24 de marzo de 2026 · Bogotá, Colombia
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
