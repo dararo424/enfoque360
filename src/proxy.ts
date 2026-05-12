@@ -9,7 +9,12 @@ const ROL_RUTAS: Record<Rol, string> = {
   medico: '/medico',
   admin: '/tq',
   usuario_centro: '/centro',
+  visitador: '/visitador',
+  gerente: '/gerente',
 }
+
+// El gerente puede entrar a /visitador (lectura) además de /gerente
+const RUTAS_GERENTE_EXTRA = ['/visitador']
 
 // Rutas que no requieren autenticación
 const RUTAS_PUBLICAS = ['/login', '/auth/callback', '/auth/signout']
@@ -77,6 +82,11 @@ export async function proxy(request: NextRequest) {
 
     // Enfermera puede acceder también a /centro
     if (rol === 'enfermera' && RUTAS_ENFERMERA_EXTRA.some((r) => pathname.startsWith(r))) {
+      return response
+    }
+
+    // Gerente puede acceder también a /visitador
+    if (rol === 'gerente' && RUTAS_GERENTE_EXTRA.some((r) => pathname.startsWith(r))) {
       return response
     }
 

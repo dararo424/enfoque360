@@ -4,13 +4,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
-type Rol = 'paciente' | 'enfermera' | 'medico' | 'admin'
+type Rol = 'paciente' | 'enfermera' | 'medico' | 'admin' | 'usuario_centro' | 'visitador' | 'gerente'
 
 const ROL_RUTAS: Record<Rol, string> = {
   paciente: '/paciente',
   enfermera: '/enfermeria',
   medico: '/medico',
   admin: '/tq',
+  usuario_centro: '/centro',
+  visitador: '/visitador',
+  gerente: '/gerente',
 }
 
 export default function LoginPage() {
